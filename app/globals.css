@@ -1,26 +1,460 @@
 @import "tailwindcss";
 
+/* ─── Design System Tokens ─── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --teal: #0DB7BB;
+  --void: #060810;
+  --obsidian: #0D1117;
+  --ink: #090B0F;
+  --mist: #F0F4F5;
+  --chalk: #E8EDF0;
+  --text-primary: #F4F6F7;
+  --text-secondary: #8A9BA8;
+  --text-dark: #111820;
+  --clinical-green: #00FF88;
+  --warning-amber: #F0A500;
+
+  --teal-rgb: 13, 183, 187;
+  --void-rgb: 6, 8, 16;
+  --obsidian-rgb: 13, 17, 23;
+  /* Very subtle grid so body copy on cards stays readable */
+  --grid-line: rgba(232, 237, 240, 0.028);
+  --grid-line-strong: rgba(13, 183, 187, 0.1);
+
+  /* Font families (CSS variables set by next/font) */
+  --font-instrument: var(--font-instrument-serif), Georgia, serif;
+  --font-dm: var(--font-dm-sans), 'Helvetica Neue', sans-serif;
+  --font-lora: var(--font-lora-serif), Georgia, serif;
+  --font-mono: var(--font-ibm-plex-mono), 'Courier New', monospace;
 }
 
+/* ─── Tailwind v4 Theme ─── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-teal: var(--teal);
+  --color-void: var(--void);
+  --color-obsidian: var(--obsidian);
+  --color-mist: var(--mist);
+  --color-chalk: var(--chalk);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-dark: var(--text-dark);
+  --color-clinical-green: var(--clinical-green);
+  --color-warning-amber: var(--warning-amber);
+
+  --font-sans: var(--font-dm);
+  --font-serif: var(--font-lora);
+  --font-display: var(--font-instrument);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Styles ─── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: var(--void);
+  color: var(--text-primary);
+  font-family: var(--font-dm);
+  overflow-x: hidden;
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: var(--teal);
+  color: var(--void);
+}
+
+::-moz-selection {
+  background: var(--teal);
+  color: var(--void);
+}
+
+/* ─── Custom Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--teal-rgb), 0.4);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--teal-rgb), 0.6);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--teal-rgb), 0.4) var(--void);
+}
+
+/* ─── Grain Overlay ─── */
+.grain-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999;
+  pointer-events: none;
+  opacity: 0.035;
+}
+
+/* ─── Typography Classes ─── */
+.font-instrument {
+  font-family: var(--font-instrument);
+}
+
+.font-dm {
+  font-family: var(--font-dm);
+}
+
+.font-lora {
+  font-family: var(--font-lora);
+}
+
+.font-ibm {
+  font-family: var(--font-mono);
+}
+
+/* ─── Border Language ─── */
+.border-clinical {
+  border: 1px solid rgba(var(--teal-rgb), 0.18);
+}
+
+/* ─── Grid / Terminal Surface Language ─── */
+.grid-surface {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    radial-gradient(circle at 50% 0%, rgba(var(--teal-rgb), 0.04), transparent 40%),
+    var(--void);
+  background-size: 72px 72px, auto, auto;
+}
+
+.grid-overlay {
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 72px 72px, 72px 72px;
+}
+
+.grid-surface::before,
+.light-grid-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(var(--teal-rgb), 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--teal-rgb), 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 78%);
+  opacity: 0.12;
+}
+
+.light-grid-surface {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(rgba(17, 24, 32, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 24, 32, 0.06) 1px, transparent 1px),
+    var(--mist);
+  background-size: 64px 64px, 64px 64px, auto;
+}
+
+.grid-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(var(--teal-rgb), 0.14);
+  border-radius: 0.9rem;
+  /* Faint grid + slightly higher panel fill for contrast on body type */
+  background:
+    linear-gradient(
+        rgba(232, 237, 240, 0.04) 1px,
+        transparent 1px
+      ),
+    linear-gradient(
+        90deg,
+        rgba(232, 237, 240, 0.04) 1px,
+        transparent 1px
+      ),
+    rgba(13, 17, 23, 0.9);
+  background-size: 34px 34px, 34px 34px, auto;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.grid-panel::before,
+.grid-panel::after {
+  content: "";
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  pointer-events: none;
+}
+
+.grid-panel::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid rgba(var(--teal-rgb), 0.5);
+  border-left: 1px solid rgba(var(--teal-rgb), 0.5);
+}
+
+.grid-panel::after {
+  right: -1px;
+  bottom: -1px;
+  border-right: 1px solid rgba(var(--teal-rgb), 0.35);
+  border-bottom: 1px solid rgba(var(--teal-rgb), 0.35);
+}
+
+.grid-panel-light {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(17, 24, 32, 0.1);
+  border-radius: 1rem;
+  background:
+    linear-gradient(rgba(17, 24, 32, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 24, 32, 0.02) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.9);
+  background-size: 34px 34px, 34px 34px, auto;
+  box-shadow: 0 18px 60px rgba(6, 8, 16, 0.06);
+}
+
+.grid-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.grid-marker::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border: 1px solid currentColor;
+  opacity: 0.7;
+  transform: rotate(45deg);
+}
+
+.scanline {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(var(--teal-rgb), 0.08),
+    transparent
+  );
+  transform: translateY(-120%);
+  animation: scanline 7s linear infinite;
+}
+
+/* ─── Teal Glow ─── */
+.teal-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--teal-rgb), 0.1) 0%, transparent 70%);
+  filter: blur(100px);
+  pointer-events: none;
+}
+
+/* ─── Button System ─── */
+.btn-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    var(--teal);
+  background-size: 18px 18px, 18px 18px, auto;
+  color: var(--void);
+  font-family: var(--font-dm);
+  font-weight: 500;
+  font-size: 0.875rem;
+  letter-spacing: -0.01em;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0.45rem;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  transform: scale(1.03);
+}
+
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-primary .btn-fill {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(-101%);
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.btn-primary:hover .btn-fill {
+  transform: translateX(0);
+}
+
+/* Compact primary for navbar — keeps bar height tight */
+.btn-primary.nav-cta {
+  padding: 0.4rem 0.95rem;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  min-height: 0;
+  border-radius: 0.4rem;
+}
+
+.btn-ghost {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    transparent;
+  background-size: 18px 18px, 18px 18px, auto;
+  color: var(--teal);
+  font-family: var(--font-dm);
+  font-weight: 500;
+  font-size: 0.875rem;
+  letter-spacing: -0.01em;
+  border: 1px solid rgba(var(--teal-rgb), 0.4);
+  border-radius: 0.45rem;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    border-color 0.3s ease;
+  text-decoration: none;
+}
+
+.btn-ghost:hover {
+  transform: scale(1.03);
+  border-color: var(--teal);
+}
+
+.btn-ghost:active {
+  transform: scale(0.97);
+}
+
+.btn-ghost .btn-fill {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--teal-rgb), 0.08);
+  transform: translateX(-101%);
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.btn-ghost:hover .btn-fill {
+  transform: translateX(0);
+}
+
+/* ─── Card Hover Glow ─── */
+.card-glow {
+  transition: box-shadow 0.3s ease;
+}
+
+.card-glow:hover {
+  box-shadow: 0 0 0 1px rgba(var(--teal-rgb), 0.18), 0 0 44px rgba(var(--teal-rgb), 0.08);
+}
+
+/* ─── Link Hover ─── */
+.link-hover {
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.link-hover:hover {
+  transform: translateY(-1px);
+  color: var(--teal);
+}
+
+/* ─── Keyframes ─── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+
+@keyframes sonar {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-120%); }
+  100% { transform: translateY(120%); }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-blink-cursor {
+  animation: blink-cursor 1s step-end infinite;
 }

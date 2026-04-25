@@ -1,21 +1,26 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { dmSans, lora, ibmPlexMono, instrumentSerif } from "./fonts";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "HEZKUE — AI-guided product demo",
+  title: "Aspargo Laboratories — Precision Drug Delivery, Reimagined",
   description:
-    "A modern landing page demo for HEZKUE (oral sildenafil suspension) with an AI voice agent experience.",
+    "HEZKUE® is the world's first oral sildenafil spray — absorbed within 5 minutes, precisely dosed, and designed for the life you actually live. Aspargo Laboratories is reinventing drug delivery through oral spray suspension technology.",
+  keywords: [
+    "Aspargo",
+    "HEZKUE",
+    "sildenafil spray",
+    "oral suspension",
+    "pharmaceutical",
+    "drug delivery",
+    "biotech",
+  ],
+  openGraph: {
+    title: "Aspargo Laboratories — Precision Drug Delivery, Reimagined",
+    description:
+      "HEZKUE® is the world's first oral sildenafil spray — absorbed within 5 minutes, precisely dosed.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -26,9 +31,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${lora.variable} ${ibmPlexMono.variable} ${instrumentSerif.variable} antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-screen bg-void text-text-primary overflow-x-hidden">
+        {children}
+      </body>
     </html>
   );
 }

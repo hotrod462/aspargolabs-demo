@@ -2,6 +2,29 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+## Vapi (AI voice agent) setup
+
+This project uses the Vapi Web SDK (`@vapi-ai/web`) to let you speak to an AI voice agent from the landing page.
+
+1) In the Vapi dashboard, copy:
+- Your **Public Key** (from account settings)
+- Your **Assistant ID** (from the assistant you want to call)
+
+2) Create a local env file:
+
+```bash
+cp .env.local.example .env.local
+```
+
+3) Fill in your values in `.env.local`:
+
+```bash
+NEXT_PUBLIC_VAPI_PUBLIC_KEY="..."
+NEXT_PUBLIC_VAPI_ASSISTANT_ID="..."
+```
+
+Then restart the dev server if it’s already running.
+
 First, run the development server:
 
 ```bash

@@ -9,7 +9,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-type Speaker = "ARIA" | "PATIENT";
+type Speaker = "ALEX" | "PATIENT";
 type CallStatus = "idle" | "connecting" | "in-call" | "ending" | "error";
 type TranscriptLine = {
   speaker: Speaker;
@@ -46,7 +46,7 @@ function normalizeTranscriptMessage(message: unknown) {
   }
 
   const speaker: Speaker =
-    transcriptMessage.role === "assistant" ? "ARIA" : "PATIENT";
+    transcriptMessage.role === "assistant" ? "ALEX" : "PATIENT";
 
   return {
     speaker,
@@ -581,7 +581,7 @@ export default function AIAgentSection() {
                   >
                     <span
                       className={
-                        line.speaker === "ARIA"
+                        line.speaker === "ALEX"
                           ? "text-teal"
                           : "text-text-secondary"
                       }

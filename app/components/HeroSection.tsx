@@ -94,16 +94,16 @@ export default function HeroSection() {
 
         <h1
           ref={line1Ref}
-          className="font-dm text-[48px] md:text-[72px] lg:text-[88px] font-semibold leading-[1.05] tracking-tight text-text-primary drop-shadow-xl"
+          className="font-dm whitespace-nowrap text-[44px] md:text-[64px] lg:text-[80px] font-semibold leading-[1.05] tracking-tight text-text-primary drop-shadow-xl"
         >
-          Medication reimagined
+          Everything you need for better sex
         </h1>
 
         <h2
           ref={line2Ref}
-          className="font-instrument text-[64px] md:text-[96px] lg:text-[120px] italic leading-[1] text-teal mt-1 drop-shadow-lg"
+          className="font-instrument text-[56px] md:text-[88px] lg:text-[112px] italic leading-[1] text-teal mt-1 drop-shadow-lg"
         >
-          drop by drop.
+          now in a minty spray.
         </h2>
 
         <p

@@ -122,7 +122,7 @@ export default function HeroSection() {
           </a>
           <a href="#ai-agent" className="btn-ghost shadow-xl bg-[rgba(13,17,23,0.3)]">
             <span className="btn-fill" />
-            <span className="relative z-10">Speak with a Specialist</span>
+            <span className="relative z-10">Get Started</span>
           </a>
         </div>
 

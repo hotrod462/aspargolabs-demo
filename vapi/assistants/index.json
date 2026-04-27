@@ -1,0 +1,20 @@
+{
+  "assistants": [
+    {
+      "createdAt": "2026-04-26T09:44:37.457Z",
+      "filename": "alex-aspargotest__08c34165-7b51-419f-9873-c54d8c01d4b2.json",
+      "id": "08c34165-7b51-419f-9873-c54d8c01d4b2",
+      "name": "Alex-AspargoTest",
+      "updatedAt": "2026-04-26T10:03:43.872Z"
+    },
+    {
+      "createdAt": "2026-04-25T13:08:31.390Z",
+      "filename": "riley__6bf91721-a8a5-482e-8344-8dbd9dbd7af5.json",
+      "id": "6bf91721-a8a5-482e-8344-8dbd9dbd7af5",
+      "name": "Riley",
+      "updatedAt": "2026-04-26T09:47:37.422Z"
+    }
+  ],
+  "count": 2,
+  "exportedAt": "2026-04-27T11:16:49.129Z"
+}

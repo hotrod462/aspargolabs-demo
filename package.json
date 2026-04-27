@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "vapi:export": "node scripts/vapi-export-assistants.mjs",
+    "vapi:sync": "node scripts/vapi-sync-assistants.mjs"
   },
   "dependencies": {
     "@vapi-ai/web": "^2.5.2",

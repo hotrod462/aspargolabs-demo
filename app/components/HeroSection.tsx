@@ -59,7 +59,7 @@ export default function HeroSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full min-h-[100dvh] flex items-center justify-center bg-void overflow-hidden"
+      className="relative w-full min-h-[100dvh] flex items-center justify-center bg-void overflow-x-hidden"
       id="hero"
     >
       {/* Background Image Container */}
@@ -94,14 +94,14 @@ export default function HeroSection() {
 
         <h1
           ref={line1Ref}
-          className="font-dm whitespace-nowrap text-[44px] md:text-[64px] lg:text-[80px] font-semibold leading-[1.05] tracking-tight text-text-primary drop-shadow-xl"
+          className="font-dm text-balance max-w-[22ch] text-[38px] sm:text-[44px] md:text-[64px] lg:text-[80px] font-semibold leading-[1.05] tracking-tight text-text-primary drop-shadow-xl"
         >
           Everything you need for better sex
         </h1>
 
         <h2
           ref={line2Ref}
-          className="font-instrument text-[56px] md:text-[88px] lg:text-[112px] italic leading-[1] text-teal mt-1 drop-shadow-lg"
+          className="font-instrument text-balance max-w-[18ch] text-[52px] sm:text-[56px] md:text-[88px] lg:text-[112px] italic leading-[1] text-teal mt-1 drop-shadow-lg"
         >
           now in a minty spray.
         </h2>

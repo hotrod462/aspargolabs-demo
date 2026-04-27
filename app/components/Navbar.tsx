@@ -5,10 +5,10 @@ import { Menu, X } from "lucide-react";
 import gsap from "gsap";
 
 const navLinks = [
-  { label: "Pipeline", href: "#pipeline" },
   { label: "HEZKUE®", href: "#product" },
   { label: "AI Intake", href: "#ai-agent" },
   { label: "For Partners", href: "#partners" },
+  { label: "Pipeline", href: "#pipeline" },
 ];
 
 function navIntersectsLightPipeline(
@@ -126,11 +126,11 @@ export default function Navbar() {
 
           {/* CTA */}
           <a
-            href="#partners"
+            href="#ai-agent"
             className="btn-primary nav-cta hidden md:inline-flex shrink-0"
           >
             <span className="btn-fill" />
-            <span className="relative z-10">Request Access</span>
+            <span className="relative z-10">Get Started</span>
           </a>
 
           {/* Mobile Hamburger */}
@@ -175,12 +175,12 @@ export default function Navbar() {
                 </a>
               ))}
               <a
-                href="#partners"
+                href="#ai-agent"
                 className="btn-primary text-[14px] py-3 px-6 mt-4 text-center"
                 onClick={closeDrawer}
               >
                 <span className="btn-fill" />
-                <span className="relative z-10">Request Access</span>
+                <span className="relative z-10">Get Started</span>
               </a>
             </div>
           </div>

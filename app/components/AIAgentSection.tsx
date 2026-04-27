@@ -23,6 +23,20 @@ type VapiTranscriptMessage = {
   transcript?: string;
   transcriptType?: string;
 };
+type IntakeFormData = {
+  edSymptoms: "yes" | "no";
+  usesNitratesOrPoppers: "yes" | "no";
+  recentCardioEvent: "yes" | "no";
+  chestPainOrShortnessOfBreath: "yes" | "no";
+  highBpOrAlphaBlockers: "yes" | "no";
+  recentNormalBp: "yes" | "no";
+  severeConditions: "yes" | "no";
+  penileConditions: "yes" | "no";
+  bloodConditions: "yes" | "no";
+  hasOtherAllergiesOrMedications: "yes" | "no";
+  allergies: string;
+  otherMedications: string;
+};
 
 const CALL_OUT_NUMBER = "+14435589279";
 const CALL_OUT_LABEL = "+1 (443) 558-9279";
@@ -294,8 +308,25 @@ export default function AIAgentSection() {
   }, [publicKey]);
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastError, setLastError] = useState<string | null>(null);
+  const [intakeMode, setIntakeMode] = useState<"call" | "form">("call");
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+  const [formMessage, setFormMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [callTime, setCallTime] = useState(0);
   const [visibleLines, setVisibleLines] = useState<TranscriptLine[]>([]);
+  const [formData, setFormData] = useState<IntakeFormData>({
+    edSymptoms: "no",
+    usesNitratesOrPoppers: "no",
+    recentCardioEvent: "no",
+    chestPainOrShortnessOfBreath: "no",
+    highBpOrAlphaBlockers: "no",
+    recentNormalBp: "yes",
+    severeConditions: "no",
+    penileConditions: "no",
+    bloodConditions: "no",
+    hasOtherAllergiesOrMedications: "no",
+    allergies: "",
+    otherMedications: "",
+  });
   const transcriptRef = useRef<HTMLDivElement>(null);
   const callActive =
     callStatus === "connecting" ||
@@ -483,8 +514,25 @@ export default function AIAgentSection() {
             Get Started
           </p>
           <h2 className="font-dm text-[32px] md:text-[48px] lg:text-[56px] font-semibold text-text-primary leading-tight">
-            Start Your Consultation.
+            {intakeMode === "call"
+              ? "Start Your Consultation."
+              : "Complete Your Intake Form."}
           </h2>
+          {intakeMode === "call" && (
+            <button
+              type="button"
+              onClick={() => {
+                if (callActive && vapi) {
+                  vapi.stop();
+                }
+                setIntakeMode("form");
+                setFormMessage(null);
+              }}
+              className="mt-4 font-ibm text-[12px] text-text-secondary underline decoration-teal/50 underline-offset-2 transition-colors hover:text-text-primary"
+            >
+              Or fill a form instead
+            </button>
+          )}
         </div>
 
         <div
@@ -497,66 +545,248 @@ export default function AIAgentSection() {
             <div className="absolute left-1/2 top-1/2 h-px w-[72%] -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-[rgba(13,183,187,0.1)] to-transparent" />
 
             <div className="relative z-10">
-              <ParticleCloudCanvas active={callActive} micLevelRef={micLevelRef} />
-            </div>
+              {intakeMode === "call" ? (
+                <ParticleCloudCanvas active={callActive} micLevelRef={micLevelRef} />
+              ) : (
+                <div className="mx-auto flex min-h-[320px] w-full max-w-[780px] items-center justify-center px-2 py-5 sm:px-4">
+                  <form
+                    className="w-full rounded-[0.8rem] border border-[rgba(13,183,187,0.22)] bg-[rgba(6,8,16,0.7)] p-4 sm:p-6"
+                    onSubmit={async (event) => {
+                      event.preventDefault();
+                      setFormMessage(null);
+                      setIsSubmittingForm(true);
 
-            <div className="absolute bottom-2 left-1/2 z-20 flex w-full max-w-[520px] -translate-x-1/2 flex-col items-center gap-2 px-4 sm:bottom-3">
-              <button
-                type="button"
-                onClick={toggleCall}
-                disabled={callStatus === "ending"}
-                className={`flex items-center gap-2 border font-dm text-[14px] sm:text-[15px] font-medium transition-all duration-300 cursor-pointer rounded-[0.45rem] px-6 py-2.5 sm:px-8 sm:py-3 ${
-                  callActive
-                    ? "border-red-400/40 bg-red-500/90 text-white shadow-sm hover:bg-red-500"
-                    : "border border-teal/50 bg-teal text-void shadow-sm hover:scale-[1.02] hover:brightness-105"
-                } disabled:cursor-wait disabled:opacity-80`}
-              >
-                {callActive ? (
-                  <>
-                    <PhoneOff size={18} />
-                    {callStatus === "ending" ? "Ending..." : "End Call"}
-                  </>
-                ) : (
-                  <>
-                    <PhoneCall size={18} />
-                    Initiate Call
-                  </>
-                )}
-              </button>
+                      try {
+                        const response = await fetch("/api/intake-form", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(formData),
+                        });
 
-              <p className="font-ibm text-[12px] text-text-secondary">
-                Or dial{" "}
-                <a
-                  href={`tel:${CALL_OUT_NUMBER}`}
-                  className="text-teal tracking-wider"
-                >
-                  {CALL_OUT_LABEL}
-                </a>
-              </p>
+                        if (!response.ok) {
+                          throw new Error("Failed to submit intake form");
+                        }
 
-              <p className="font-ibm text-[12px] text-text-secondary">
-                Call Status:{" "}
-                <span
-                  className={
-                    callStatus === "error"
-                      ? "text-warning-amber"
-                      : callActive
-                        ? "text-clinical-green"
-                        : "text-text-secondary"
-                  }
-                >
-                  {statusLabel}
-                </span>
-              </p>
-              {lastError && (
-                <p className="font-ibm text-[10px] text-warning-amber/90 text-center max-w-sm">
-                  {lastError}
-                </p>
+                        setFormMessage({
+                          type: "success",
+                          text: "Intake submitted successfully. We will follow up shortly.",
+                        });
+                      } catch (error) {
+                        setFormMessage({
+                          type: "error",
+                          text:
+                            error instanceof Error
+                              ? error.message
+                              : "Could not submit intake form",
+                        });
+                      } finally {
+                        setIsSubmittingForm(false);
+                      }
+                    }}
+                  >
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {[
+                        { key: "edSymptoms", label: "Are you experiencing ED symptoms?" },
+                        { key: "usesNitratesOrPoppers", label: "Do you use nitrates/poppers?" },
+                        { key: "recentCardioEvent", label: "Any recent cardiac event?" },
+                        { key: "chestPainOrShortnessOfBreath", label: "Chest pain or shortness of breath?" },
+                        { key: "highBpOrAlphaBlockers", label: "High BP or alpha blockers?" },
+                        { key: "recentNormalBp", label: "Recent normal blood pressure reading?" },
+                        { key: "severeConditions", label: "Any severe medical conditions?" },
+                        { key: "penileConditions", label: "Any penile conditions?" },
+                        { key: "bloodConditions", label: "Any blood conditions?" },
+                      ].map((item) => (
+                        <label key={item.key} className="block">
+                          <span className="mb-1 block font-ibm text-[11px] uppercase tracking-[0.08em] text-text-secondary">
+                            {item.label}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {(["yes", "no"] as const).map((choice) => (
+                              <button
+                                key={choice}
+                                type="button"
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    [item.key]: choice,
+                                  }))
+                                }
+                                className={`rounded-full border px-4 py-1.5 font-ibm text-[12px] uppercase tracking-[0.08em] transition-all ${
+                                  formData[item.key as keyof IntakeFormData] === choice
+                                    ? "border-teal/70 bg-teal text-void"
+                                    : "border-[rgba(13,183,187,0.26)] bg-[rgba(10,14,24,0.86)] text-text-secondary hover:text-text-primary"
+                                }`}
+                              >
+                                {choice}
+                              </button>
+                            ))}
+                          </div>
+                        </label>
+                      ))}
+
+                      <label className="block sm:col-span-2">
+                        <span className="mb-1 block font-ibm text-[11px] uppercase tracking-[0.08em] text-text-secondary">
+                          Do you have other allergies or medications to share?
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {(["yes", "no"] as const).map((choice) => (
+                            <button
+                              key={`hasOther-${choice}`}
+                              type="button"
+                              onClick={() =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  hasOtherAllergiesOrMedications: choice,
+                                  ...(choice === "no"
+                                    ? { allergies: "", otherMedications: "" }
+                                    : {}),
+                                }))
+                              }
+                              className={`rounded-full border px-4 py-1.5 font-ibm text-[12px] uppercase tracking-[0.08em] transition-all ${
+                                formData.hasOtherAllergiesOrMedications === choice
+                                  ? "border-teal/70 bg-teal text-void"
+                                  : "border-[rgba(13,183,187,0.26)] bg-[rgba(10,14,24,0.86)] text-text-secondary hover:text-text-primary"
+                              }`}
+                            >
+                              {choice}
+                            </button>
+                          ))}
+                        </div>
+                      </label>
+
+                      {formData.hasOtherAllergiesOrMedications === "yes" && (
+                        <>
+                          <label className="block sm:col-span-2">
+                            <span className="mb-1 block font-ibm text-[11px] uppercase tracking-[0.08em] text-text-secondary">
+                              Allergies (comma separated)
+                            </span>
+                            <input
+                              type="text"
+                              value={formData.allergies}
+                              onChange={(e) =>
+                                setFormData((prev) => ({ ...prev, allergies: e.target.value }))
+                              }
+                              className="w-full rounded-[0.5rem] border border-[rgba(13,183,187,0.26)] bg-[rgba(10,14,24,0.86)] px-3 py-2 font-ibm text-[13px] text-text-primary outline-none transition-colors focus:border-teal"
+                              placeholder="e.g. Penicillin, Ibuprofen"
+                            />
+                          </label>
+
+                          <label className="block sm:col-span-2">
+                            <span className="mb-1 block font-ibm text-[11px] uppercase tracking-[0.08em] text-text-secondary">
+                              Other Medications (comma separated)
+                            </span>
+                            <input
+                              type="text"
+                              value={formData.otherMedications}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  otherMedications: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-[0.5rem] border border-[rgba(13,183,187,0.26)] bg-[rgba(10,14,24,0.86)] px-3 py-2 font-ibm text-[13px] text-text-primary outline-none transition-colors focus:border-teal"
+                              placeholder="e.g. Metformin, Atorvastatin"
+                            />
+                          </label>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIntakeMode("call");
+                          setFormMessage(null);
+                        }}
+                        className="font-ibm text-[12px] text-text-secondary transition-colors hover:text-text-primary"
+                      >
+                        Back to voice call
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmittingForm}
+                        className="rounded-[0.45rem] border border-teal/50 bg-teal px-4 py-2 font-dm text-[14px] font-medium text-void shadow-sm transition-all duration-300 hover:brightness-105 disabled:cursor-wait disabled:opacity-80"
+                      >
+                        {isSubmittingForm ? "Submitting..." : "Submit Intake"}
+                      </button>
+                    </div>
+
+                    {formMessage && (
+                      <p
+                        className={`mt-3 font-ibm text-[11px] ${
+                          formMessage.type === "success"
+                            ? "text-clinical-green"
+                            : "text-warning-amber"
+                        }`}
+                      >
+                        {formMessage.text}
+                      </p>
+                    )}
+                  </form>
+                </div>
               )}
             </div>
+
+            {intakeMode === "call" && (
+              <div className="absolute bottom-2 left-1/2 z-20 flex w-full max-w-[520px] -translate-x-1/2 flex-col items-center gap-2 px-4 sm:bottom-3">
+                <button
+                  type="button"
+                  onClick={toggleCall}
+                  disabled={callStatus === "ending"}
+                  className={`flex items-center gap-2 border font-dm text-[14px] sm:text-[15px] font-medium transition-all duration-300 cursor-pointer rounded-[0.45rem] px-6 py-2.5 sm:px-8 sm:py-3 ${
+                    callActive
+                      ? "border-red-400/40 bg-red-500/90 text-white shadow-sm hover:bg-red-500"
+                      : "border border-teal/50 bg-teal text-void shadow-sm hover:scale-[1.02] hover:brightness-105"
+                  } disabled:cursor-wait disabled:opacity-80`}
+                >
+                  {callActive ? (
+                    <>
+                      <PhoneOff size={18} />
+                      {callStatus === "ending" ? "Ending..." : "End Call"}
+                    </>
+                  ) : (
+                    <>
+                      <PhoneCall size={18} />
+                      Initiate Call
+                    </>
+                  )}
+                </button>
+
+                <p className="font-ibm text-[12px] text-text-secondary">
+                  Or dial{" "}
+                  <a
+                    href={`tel:${CALL_OUT_NUMBER}`}
+                    className="text-teal tracking-wider"
+                  >
+                    {CALL_OUT_LABEL}
+                  </a>
+                </p>
+
+                <p className="font-ibm text-[12px] text-text-secondary">
+                  Call Status:{" "}
+                  <span
+                    className={
+                      callStatus === "error"
+                        ? "text-warning-amber"
+                        : callActive
+                          ? "text-clinical-green"
+                          : "text-text-secondary"
+                    }
+                  >
+                    {statusLabel}
+                  </span>
+                </p>
+                {lastError && (
+                  <p className="font-ibm text-[10px] text-warning-amber/90 text-center max-w-sm">
+                    {lastError}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
-          {callActive && (
+          {intakeMode === "call" && callActive && (
             <div
               ref={transcriptRef}
               className="relative z-20 mx-auto -mt-4 h-[min(150px,28vh)] max-w-[760px] overflow-y-auto px-4 py-4 [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)]"

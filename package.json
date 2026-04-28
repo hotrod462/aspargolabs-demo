@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "vapi:export": "dotenv -e .env -- node scripts/vapi-export-assistants.mjs",
-    "vapi:sync": "dotenv -e .env -- node scripts/vapi-sync-assistants.mjs"
+    "vapi:sync": "dotenv -e .env -- node scripts/vapi-sync-assistants.mjs",
+    "vapi:sync-tools": "dotenv -e .env -- node scripts/vapi-sync-tools.mjs",
+    "db:gen-types": "dotenv -e .env -- sh -c \"npx supabase gen types typescript --project-id \\\"$SUPABASE_PROJECT_ID\\\" > types/database.types.ts\"",
+    "db:migrate": "dotenv -e .env -- npx supabase db push",
+    "db:reset": "dotenv -e .env -- npx supabase db reset"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
@@ -27,7 +31,6 @@
     "@types/react-dom": "^19",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9",
-    "dotenv-cli": "^10.0.0",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
     "typescript": "^5"

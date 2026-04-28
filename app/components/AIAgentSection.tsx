@@ -40,6 +40,7 @@ type IntakeFormData = {
 
 const CALL_OUT_NUMBER = "+14435589279";
 const CALL_OUT_LABEL = "+1 (443) 558-9279";
+const SHOW_LIVE_TRANSCRIPT = false;
 
 /** Soft edge on the particle canvas so pulses do not hard-clip to a rectangle */
 const PARTICLE_EDGE_MASK =
@@ -786,7 +787,7 @@ export default function AIAgentSection() {
             )}
           </div>
 
-          {intakeMode === "call" && callActive && (
+          {SHOW_LIVE_TRANSCRIPT && intakeMode === "call" && callActive && (
             <div
               ref={transcriptRef}
               className="relative z-20 mx-auto -mt-4 h-[min(150px,28vh)] max-w-[760px] overflow-y-auto px-4 py-4 [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)]"

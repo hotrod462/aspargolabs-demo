@@ -106,6 +106,7 @@ export function stripAssistantForPatch(assistant) {
     orgId: _orgId,
     createdAt: _createdAt,
     updatedAt: _updatedAt,
+    isServerUrlSecretSet: _isServerUrlSecretSet,
     ...rest
   } = assistant;
 

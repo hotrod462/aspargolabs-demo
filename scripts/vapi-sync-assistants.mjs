@@ -44,14 +44,26 @@ async function main() {
       continue;
     }
 
-    await vapiFetchJson(`${VAPI_API_BASE_URL}/assistant/${id}`, {
-      method: 'PATCH',
-      apiKey,
-      body: patch,
-    });
+    try {
+      await vapiFetchJson(`${VAPI_API_BASE_URL}/assistant/${id}`, {
+        method: 'PATCH',
+        apiKey,
+        body: patch,
+      });
 
-    updated++;
-    process.stdout.write(`Updated assistant ${id} from ${path.basename(filePath)}\n`);
+      updated++;
+      process.stdout.write(`Updated assistant ${id} from ${path.basename(filePath)}\n`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('404 Not Found')) {
+        skipped++;
+        process.stdout.write(
+          `Skipping ${path.basename(filePath)} (assistant ${id} not found in current org)\n`
+        );
+        continue;
+      }
+      throw err;
+    }
   }
 
   if (!dryRun) {

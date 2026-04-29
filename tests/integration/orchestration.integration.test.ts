@@ -7,18 +7,54 @@ import {
   runOrchestrationScenario,
 } from "./helpers";
 import { ORCHESTRATION_SCENARIOS, type ScenarioDefinition } from "./scenarios";
+import { intakeStore } from "@/lib/storage/supabase-intake-store";
 
 /**
  * Inputs + expectations: see `tests/integration/scenarios.ts` (`ORCHESTRATION_SCENARIOS`).
- * Vitest prints each `it` title — that is the scenario name. `call_id` prefix in Supabase: `itest-<scenarioId>-*`.
  *
- * `npm run test:integration`
- * `INTEGRATION_N=3 npm run test:integration` (repeats scenarios with `repeatIntegrationRuns: true`)
- * `INTEGRATION_VERBOSE=1 npm run test:integration -- --reporter=verbose` logs each turn (stdout may be hidden without `--reporter=verbose`).
+ * Tier 2: when `scenario.tier2Checks` is set, each `(turnOneBased, allowedInterrupts)` asserts
+ * `payload.extraction.interrupt` on the nth `turn_extraction` event (1-based; matches log turn).
  */
+
 const RUN = integrationEnvReady();
 if (!RUN) {
   console.warn(missingEnvMessage());
+}
+
+async function assertTier2(
+  scenario: ScenarioDefinition,
+  sessionId: string,
+  scenarioIdLabel: string,
+) {
+  const checks = scenario.tier2Checks;
+  if (!checks?.length) return;
+
+  const events = await intakeStore.getEventsForSession(sessionId);
+  const extractions = events
+    .filter((e) => e.event_type === "turn_extraction")
+    .sort((a, b) => {
+      const ta = String(a.created_at ?? "");
+      const tb = String(b.created_at ?? "");
+      return ta.localeCompare(tb);
+    });
+
+  const tag = `[${scenario.scenarioId}]${scenarioIdLabel}`;
+
+  for (const check of checks) {
+    const idx = check.turnOneBased - 1;
+    expect(
+      extractions[idx],
+      `${tag}: expected turn_extraction at turn ${check.turnOneBased} (${extractions.length} extraction events persisted)`,
+    ).toBeDefined();
+    const payload = extractions[idx]!.payload as Record<string, unknown>;
+    const extraction = payload.extraction as Record<string, unknown> | undefined;
+    const interrupt = extraction?.interrupt;
+    expect(interrupt, `${tag}: extract interrupt missing at turn ${check.turnOneBased}`).toBeTruthy();
+    expect(
+      check.allowedInterrupts,
+      `${tag}: turn ${check.turnOneBased}, interrupt="${String(interrupt)}"`,
+    ).toContain(String(interrupt));
+  }
 }
 
 function assertOutcome(
@@ -36,6 +72,9 @@ function assertOutcome(
   if (scenario.expect.lastTurn?.state !== undefined) {
     expect(last?.state, `${tag} last turn state`).toBe(scenario.expect.lastTurn.state);
   }
+  if (scenario.expect.lastSayIncludes !== undefined && last?.say !== undefined) {
+    expect(last.say.toLowerCase(), `${tag} last turn say`).toContain(scenario.expect.lastSayIncludes.toLowerCase());
+  }
 }
 
 describe.skipIf(!RUN)("orchestration + FSM + Groq + Supabase", () => {
@@ -49,6 +88,7 @@ describe.skipIf(!RUN)("orchestration + FSM + Groq + Supabase", () => {
           steps: scenario.steps,
         });
         assertOutcome(scenario, outcome, runLabel);
+        await assertTier2(scenario, outcome.sessionId, runLabel);
       }
     });
   }

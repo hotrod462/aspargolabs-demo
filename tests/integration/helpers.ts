@@ -44,6 +44,13 @@ function integrationVerbose(): boolean {
   return process.env.INTEGRATION_VERBOSE === "1";
 }
 
+/** Optional pause between Groq calls (helps avoid TPM limits on large suites). `INTEGRATION_STEP_DELAY_MS`. */
+function integrationStepDelayMs(): number {
+  const raw = process.env.INTEGRATION_STEP_DELAY_MS;
+  const n = raw != null ? Number.parseInt(String(raw), 10) : 0;
+  return Number.isFinite(n) && n >= 0 ? Math.min(n, 60_000) : 0;
+}
+
 /**
  * Runs each transcript in order against the same `callId` (session advances).
  * Returns the last turn result and the final session row from the store.
@@ -54,11 +61,15 @@ function integrationVerbose(): boolean {
  *
  * Per-turn `[itest] … start/ok` lines need `INTEGRATION_VERBOSE=1`; use `vitest --reporter=verbose`
  * if stdout does not appear (default reporter may omit it).
+ *
+ * **`INTEGRATION_STEP_DELAY_MS`**: optional pause (ms) between successful turns to reduce Groq TPM
+ * rate-limit hits on long multi-turn suites.
  */
 export async function runOrchestrationScenario(
   options: RunOrchestrationScenarioOptions,
 ): Promise<{
   callId: string;
+  sessionId: string;
   turnResults: ProcessTurnResult[];
   finalState: string;
   finalStatus: CallStatus;
@@ -93,6 +104,10 @@ export async function runOrchestrationScenario(
           `[itest] ${options.scenarioId} turn ${i + 1}/${stepCount} ok label=${label} stateAfter=${result.state} status=${result.status} end_call=${result.end_call}`,
         );
       }
+      const gap = integrationStepDelayMs();
+      if (gap > 0 && i < stepCount - 1) {
+        await new Promise((r) => setTimeout(r, gap));
+      }
     } catch (err) {
       const preview = transcript.length > 160 ? `${transcript.slice(0, 160)}…` : transcript;
       console.error(
@@ -121,6 +136,7 @@ export async function runOrchestrationScenario(
 
   return {
     callId,
+    sessionId: session.id,
     turnResults,
     finalState: session.current_state,
     finalStatus: session.status,

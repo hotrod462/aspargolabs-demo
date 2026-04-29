@@ -17,6 +17,37 @@ function formatMsPretty(ms: number): string {
   return `${Math.round(ms).toLocaleString()} ms`;
 }
 
+/** Relative time from `started_at` for the five newest rows in the call list. */
+function formatStartedRelativeAgo(iso: string, nowMs: number): string {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "—";
+  const sec = Math.floor((nowMs - t) / 1000);
+  if (sec < 0) return "just now";
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 48) return `${hr}h ago`;
+  const d = Math.floor(hr / 24);
+  return `${d}d ago`;
+}
+
+/** Wall-clock start time for calls after the five most recent in the list. */
+function formatStartedAbsolute(iso: string): string {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "—";
+  const y = d.getFullYear();
+  const nowY = new Date().getFullYear();
+  const opts: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  };
+  if (y !== nowY) opts.year = "numeric";
+  return d.toLocaleString(undefined, opts);
+}
+
 /** Sum persisted per-turn extraction LLM durations (fallback when metadata not yet synced). */
 function sumLlmLatencyFromExtractEvents(events: IntakeEvent[]): { totalMs: number; turns: number } {
   let totalMs = 0;
@@ -334,6 +365,8 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
   const [includedStatuses, setIncludedStatuses] = useState<Set<CallStatus>>(
     () => new Set([...CALL_STATUSES]),
   );
+  /** Refreshes relative “Xs ago” labels for the five newest visible calls. */
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -341,6 +374,16 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
     () => sessions.filter((s) => includedStatuses.has(s.status as CallStatus)),
     [sessions, includedStatuses],
   );
+
+  const sortedFilteredSessions = useMemo(
+    () => [...filteredSessions].sort((a, b) => b.started_at.localeCompare(a.started_at)),
+    [filteredSessions],
+  );
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick(Date.now()), 10_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const statusCounts = useMemo(() => {
     const m = new Map<CallStatus, number>();
@@ -365,10 +408,10 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
   }, []);
 
   const resolvedSelectedId = useMemo(() => {
-    if (filteredSessions.length === 0) return null;
-    if (selectedId && filteredSessions.some((s) => s.id === selectedId)) return selectedId;
-    return filteredSessions[0]!.id;
-  }, [filteredSessions, selectedId]);
+    if (sortedFilteredSessions.length === 0) return null;
+    if (selectedId && sortedFilteredSessions.some((s) => s.id === selectedId)) return selectedId;
+    return sortedFilteredSessions[0]!.id;
+  }, [sortedFilteredSessions, selectedId]);
 
   const selected = useMemo(() => {
     if (!resolvedSelectedId) return null;
@@ -558,11 +601,15 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
         <div className="mt-4 space-y-2">
           {sessions.length === 0 ? (
             <p className="text-sm text-zinc-500">No sessions yet.</p>
-          ) : filteredSessions.length === 0 ? (
+          ) : sortedFilteredSessions.length === 0 ? (
             <p className="text-sm text-zinc-500">Nothing matches · select more statuses.</p>
           ) : (
-            filteredSessions.map((session) => {
+            sortedFilteredSessions.map((session, index) => {
               const active = resolvedSelectedId === session.id;
+              const startedLabel =
+                index < 5
+                  ? `Started ${formatStartedRelativeAgo(session.started_at, nowTick)}`
+                  : `Started ${formatStartedAbsolute(session.started_at)}`;
               return (
                 <button
                   key={session.id}
@@ -575,6 +622,9 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
                   }`}
                 >
                   <div className="font-medium">{session.patient_phone ?? session.call_id}</div>
+                  <p className="mt-0.5 font-mono text-[11px] leading-snug text-zinc-500 tabular-nums">
+                    {startedLabel}
+                  </p>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${callStatusBadgeClass(

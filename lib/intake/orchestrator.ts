@@ -27,6 +27,7 @@ function terminalStatus(state: AnyState): CallStatus {
   if (state === "emergency_end") return "emergency";
   if (state === "proxy_caller_end") return "proxy_caller";
   if (state === "needs_review") return "needs_review";
+  if (state === "declined_start_end") return "abandoned";
   return "in_progress";
 }
 
@@ -308,16 +309,23 @@ export async function processIntakeTurn(
     status,
     completion_pct: completionPct(nextState),
     ended_at: status === "in_progress" ? null : new Date().toISOString(),
-    hard_stop_reason: status === "in_progress" ? null : (stateConfig.hardStopMessage ?? null),
+    hard_stop_reason:
+      status === "in_progress"
+        ? null
+        : nextState === "declined_start_end"
+          ? "declined_start"
+          : (stateConfig.hardStopMessage ?? null),
     needs_review: status === "needs_review",
   });
 
   if (status !== "in_progress") {
     const say =
-      stateConfig.hardStopMessage ??
-      (nextState === "completed"
-        ? "Thank you, that is all the medical information I need. I am sending your file to our licensed doctor for review."
-        : "I cannot proceed with this intake. I am going to end the call now.");
+      nextState === "declined_start_end"
+        ? "Understood. Thank you for calling. Goodbye."
+        : stateConfig.hardStopMessage ??
+          (nextState === "completed"
+            ? "Thank you, that is all the medical information I need. I am sending your file to our licensed doctor for review."
+            : "I cannot proceed with this intake. I am going to end the call now.");
     return withAssistantLogged(store, session.id, input, {
       say,
       end_call: true,

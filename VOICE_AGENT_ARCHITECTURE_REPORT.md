@@ -1081,21 +1081,22 @@ This makes the system auditable.
 
 The FSM can follow your current v2 prompt:
 
-1. `age_gate`
-2. `chief_complaint`
-3. `nitrates_poppers`
-4. `recent_ed_medications`
-5. `recent_major_cardio_event`
-6. `exertional_symptoms`
-7. `bp_alpha_blockers`
-8. `recent_bp_check`
-9. `organs_bleeding_ulcers_eyes`
-10. `priapism_penile_shape`
-11. `blood_conditions`
-12. `allergies`
-13. `daily_meds_supplements`
-14. `final_confirmation`
-15. `wrap_up`
+1. `session_ready` — “Are you ready to get started?” (aligns with assistant `firstMessage` ending)
+2. `age_gate`
+3. `chief_complaint`
+4. `nitrates_poppers`
+5. `recent_ed_medications`
+6. `recent_major_cardio_event`
+7. `exertional_symptoms`
+8. `bp_alpha_blockers`
+9. `recent_bp_check`
+10. `organs_bleeding_ulcers_eyes`
+11. `priapism_penile_shape`
+12. `blood_conditions`
+13. `allergies`
+14. `daily_meds_supplements`
+15. `final_confirmation`
+16. `wrap_up`
 
 Add global interrupt states:
 
@@ -1107,6 +1108,10 @@ Add global interrupt states:
 - `emergency_end`
 - `proxy_caller_end`
 - `human_escalation`
+
+Permanent terminals (examples):
+
+- `declined_start_end` — caller explicitly declines to start after the opening readiness question
 
 The global states are temporary. After handling them, return to the previous intake state unless the call must end.
 
@@ -1614,7 +1619,7 @@ CallSession:
 - started_at
 - ended_at
 - status
-- current_state
+- current_state (initial value set in app code, e.g. `DEFAULT_INTAKE_STATE` → `session_ready`; not a DB column default)
 - completion_percent
 - hard_stop_reason
 - emergency_flag
@@ -1815,7 +1820,7 @@ Backend creates call session:
 {
   "call_id": "abc",
   "status": "in_progress",
-  "state": "age_gate"
+  "state": "session_ready"
 }
 ```
 

@@ -28,10 +28,25 @@ export interface ScenarioDefinition {
  */
 export const ORCHESTRATION_SCENARIOS: ScenarioDefinition[] = [
   {
+    scenarioId: "session-ready-no",
+    title: "Session ready: user declines → declined_start_end",
+    description: "User says they are not ready; call should end politely with abandoned status.",
+    steps: [{ transcript: "No, not right now." }],
+    expect: {
+      finalState: "declined_start_end",
+      finalStatus: "abandoned",
+      lastTurn: { end_call: true, state: "declined_start_end" },
+    },
+    repeatIntegrationRuns: true,
+  },
+  {
     scenarioId: "age-gate-no",
     title: "Age gate: under 18 / not for self → proxy_caller_end",
     description: "User declines age / third party; should end as proxy caller.",
-    steps: [{ transcript: "No, I'm not eighteen and I'm calling for someone else." }],
+    steps: [
+      { transcript: "Yes, I'm ready to get started.", label: "session_ready" },
+      { transcript: "No, I'm not eighteen and I'm calling for someone else.", label: "age_gate" },
+    ],
     expect: {
       finalState: "proxy_caller_end",
       finalStatus: "proxy_caller",
@@ -42,8 +57,11 @@ export const ORCHESTRATION_SCENARIOS: ScenarioDefinition[] = [
   {
     scenarioId: "age-gate-yes",
     title: "Age gate: yes → chief_complaint",
-    description: "Eligible caller; one clear affirmative.",
-    steps: [{ transcript: "Yes, I'm over 18 and I'm calling for myself today." }],
+    description: "Eligible caller; readiness then clear age affirmation.",
+    steps: [
+      { transcript: "Yes, I'm ready.", label: "session_ready" },
+      { transcript: "Yes, I'm over 18 and I'm calling for myself today.", label: "age_gate" },
+    ],
     expect: {
       finalState: "chief_complaint",
       finalStatus: "in_progress",
@@ -53,7 +71,7 @@ export const ORCHESTRATION_SCENARIOS: ScenarioDefinition[] = [
   {
     scenarioId: "age-gate-emergency",
     title: "Age gate: acute emergency language → emergency_end",
-    description: "Chest pain now; extractor should raise emergency interrupt.",
+    description: "Chest pain now; extractor should raise emergency interrupt (from session_ready).",
     steps: [{ transcript: "I'm having crushing chest pain right now, it started five minutes ago." }],
     expect: {
       finalState: "emergency_end",
@@ -65,8 +83,9 @@ export const ORCHESTRATION_SCENARIOS: ScenarioDefinition[] = [
     scenarioId: "multi-age-to-nitrates",
     title: "Multi-turn: age yes → ED yes → nitrates_poppers",
     description:
-      "Two scripted turns: pass age_gate then chief_complaint; expect next prompt state nitrates_poppers.",
+      "Three scripted turns: session ready → pass age_gate → chief_complaint; expect next prompt state nitrates_poppers.",
     steps: [
+      { transcript: "Yes, I'm ready to get started.", label: "session_ready" },
       { transcript: "Yes, I'm over 18 and I'm calling for myself today.", label: "age_gate" },
       {
         transcript: "Yes, I have difficulty getting and maintaining an erection.",
@@ -83,8 +102,9 @@ export const ORCHESTRATION_SCENARIOS: ScenarioDefinition[] = [
     scenarioId: "multi-age-ed-nitrates-no",
     title: "Multi-turn: age yes → ED yes → nitrates no → recent_ed_medications",
     description:
-      "Three scripted turns: advance through chief_complaint and answer \"no\" at nitrates_poppers; expect recent_ed_medications.",
+      "Four scripted turns: ready → age → chief_complaint → nitrates; expect recent_ed_medications.",
     steps: [
+      { transcript: "Yes, I'm ready to get started.", label: "session_ready" },
       { transcript: "Yes, I'm over 18 and I'm calling for myself today.", label: "age_gate" },
       {
         transcript: "Yes, I have difficulty getting and maintaining an erection.",
@@ -104,11 +124,12 @@ export const ORCHESTRATION_SCENARIOS: ScenarioDefinition[] = [
   },
   {
     scenarioId: "happy-path-full-intake",
-    title: "Full happy path: age_gate through all questions to completed",
+    title: "Full happy path: session_ready through age_gate and all questions to completed",
     description:
-      "Eligible male path: ~15 user turns through every active FSM state to completed. " +
+      "Eligible male path: ~16 user turns through every active FSM state to completed. " +
       "Relies on Groq extraction; may flake if the model returns unclear answers or invalid futureSlots.",
     steps: [
+      { transcript: "Yes, I'm ready to begin.", label: "session_ready" },
       { transcript: "Yes, I'm over 18 and I'm calling for myself today.", label: "age_gate" },
       {
         transcript:

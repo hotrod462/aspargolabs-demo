@@ -20,6 +20,16 @@ export interface StateConfig {
 }
 
 export const FSM_CONFIG: Record<IntakeState, StateConfig> = {
+  session_ready: {
+    question: "Are you ready to get started?",
+    fieldKey: "ready_to_continue",
+    answerType: "yes_no",
+    transitions: {
+      yes: "age_gate",
+      no: "declined_start_end",
+      emergency: "emergency_end",
+    },
+  },
   age_gate: {
     question: "Are you 18 or older and calling for yourself today?",
     fieldKey: "age_confirmed",
@@ -161,6 +171,7 @@ export const FSM_CONFIG: Record<IntakeState, StateConfig> = {
 };
 
 const STATE_ORDER: IntakeState[] = [
+  "session_ready",
   "age_gate",
   "chief_complaint",
   "nitrates_poppers",

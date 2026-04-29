@@ -77,7 +77,7 @@ export async function runOrchestrationScenario(
 
     if (integrationVerbose()) {
       console.log(
-        `[itest] ${options.scenarioId} turn ${i + 1}/${stepCount} start label=${label} stateBefore=${sessionBefore?.current_state ?? "(new call → age_gate implicit)"}`,
+        `[itest] ${options.scenarioId} turn ${i + 1}/${stepCount} start label=${label} stateBefore=${sessionBefore?.current_state ?? "(new call → session_ready via createSession)"}`,
       );
     }
 

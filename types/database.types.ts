@@ -7,7 +7,7 @@ export type Json =
   | Json[];
 
 /**
- * Hand-maintained to match `supabase/migrations/20260428111900_intake_schema.sql`.
+ * Hand-maintained to match `supabase/migrations` (e.g. `20260428111900_intake_schema.sql`, `20260428140000_session_ready_and_no_db_default_current_state.sql`).
  * Regenerate with: `npm run db:gen-types` when linked to a project.
  */
 export type Database = {

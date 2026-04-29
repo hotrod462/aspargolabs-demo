@@ -1,3 +1,5 @@
+import { completionPct } from "@/lib/intake/fsm";
+import { DEFAULT_INTAKE_STATE } from "@/lib/intake/schema";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import type { Json } from "@/types/database.types";
 import type {
@@ -14,21 +16,34 @@ import type {
 
 export class SupabaseIntakeStore implements IntakeStore {
   async createSession(input: CreateSessionInput): Promise<CallSession> {
+    const existing = await this.getSession(input.call_id);
+    if (existing) return existing;
+
+    const current_state = DEFAULT_INTAKE_STATE;
+    const completion_pct = completionPct(current_state);
+
     const { data, error } = await supabaseAdmin
       .from("call_sessions")
-      .upsert(
-        {
-          call_id: input.call_id,
-          assistant_id: input.assistant_id ?? null,
-          patient_phone: input.patient_phone ?? null,
-          metadata: (input.metadata ?? {}) as Json,
-        },
-        { onConflict: "call_id" },
-      )
+      .insert({
+        call_id: input.call_id,
+        assistant_id: input.assistant_id ?? null,
+        patient_phone: input.patient_phone ?? null,
+        metadata: (input.metadata ?? {}) as Json,
+        current_state,
+        completion_pct,
+        status: "in_progress",
+      } as never)
       .select("*")
       .single();
 
-    if (error) throw new Error(`createSession failed: ${error.message}`);
+    if (error) {
+      if (error.code === "23505") {
+        const retry = await this.getSession(input.call_id);
+        if (retry) return retry;
+      }
+      throw new Error(`createSession failed: ${error.message}`);
+    }
+
     return data as unknown as CallSession;
   }
 

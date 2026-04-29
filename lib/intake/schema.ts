@@ -1,4 +1,5 @@
 export const INTAKE_STATES = [
+  "session_ready",
   "age_gate",
   "chief_complaint",
   "nitrates_poppers",
@@ -18,6 +19,9 @@ export const INTAKE_STATES = [
 
 export type IntakeState = (typeof INTAKE_STATES)[number];
 
+/** First active FSM step for new sessions; also set on `createSession` (not the database default). */
+export const DEFAULT_INTAKE_STATE: IntakeState = "session_ready";
+
 export const TERMINAL_STATES = [
   "completed",
   "hard_stop_end",
@@ -25,6 +29,7 @@ export const TERMINAL_STATES = [
   "emergency_end",
   "proxy_caller_end",
   "needs_review",
+  "declined_start_end",
 ] as const;
 
 export type TerminalState = (typeof TERMINAL_STATES)[number];
@@ -62,6 +67,7 @@ export type FieldStatus =
   | "error";
 
 export const FIELD_KEYS = [
+  "ready_to_continue",
   "age_confirmed",
   "ed_symptoms",
   "uses_nitrates_or_poppers",

@@ -88,6 +88,41 @@ export async function POST(req: Request) {
       other_medications: normalizeList(body.otherMedications),
     };
 
+    const fieldUpdates: Array<{ field_key: string; value: unknown }> = [
+      { field_key: "ed_symptoms", value: body.edSymptoms ?? null },
+      { field_key: "uses_nitrates_or_poppers", value: body.usesNitratesOrPoppers ?? null },
+      { field_key: "recent_cardio_event", value: body.recentCardioEvent ?? null },
+      { field_key: "exertional_symptoms", value: body.chestPainOrShortnessOfBreath ?? null },
+      { field_key: "bp_alpha_blockers", value: body.highBpOrAlphaBlockers ?? null },
+      { field_key: "recent_bp_check", value: body.recentNormalBp ?? null },
+      { field_key: "organs_bleeding_ulcers_eyes", value: body.severeConditions ?? null },
+      { field_key: "priapism_penile_shape", value: body.penileConditions ?? null },
+      { field_key: "blood_conditions", value: body.bloodConditions ?? null },
+      {
+        field_key: "allergies",
+        value: body.allergies && body.allergies.length > 0 ? body.allergies : ["none"],
+      },
+      {
+        field_key: "daily_meds_supplements",
+        value:
+          body.otherMedications && body.otherMedications.length > 0
+            ? body.otherMedications
+            : ["none"],
+      },
+    ];
+
+    await Promise.all(
+      fieldUpdates.map((field) =>
+        intakeStore.updateField(session.id, {
+          field_key: field.field_key as never,
+          value: field.value,
+          status: field.value === null ? "unclear" : "confirmed",
+          source: "manual_form",
+          evidence: "manual intake form submission",
+        }),
+      ),
+    );
+
     await intakeStore.saveEvent({
       session_id: session.id,
       event_type: "manual_form_submission",

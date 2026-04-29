@@ -27,7 +27,6 @@ type VapiTranscriptMessage = {
 type EdFrequencyAnswer = "" | "almost_never" | "sometimes" | "often" | "almost_every_time";
 type RiskAnswer = "" | "yes" | "no";
 type ChestSymptomsAnswer = "" | "no" | "mild_on_exertion" | "frequent_or_severe";
-type HighBpAnswer = "" | "no" | "yes_controlled_or_alpha_blocker" | "yes_uncontrolled";
 type RecentNormalBpAnswer = "" | "normal" | "low" | "high";
 type OtherDetailsAnswer = "" | "yes" | "no";
 
@@ -36,7 +35,7 @@ type IntakeFormData = {
   usesNitratesOrPoppers: RiskAnswer;
   recentCardioEvent: RiskAnswer;
   chestPainOrShortnessOfBreath: ChestSymptomsAnswer;
-  highBpOrAlphaBlockers: HighBpAnswer;
+  highBpOrAlphaBlockers: RiskAnswer;
   recentNormalBp: RecentNormalBpAnswer;
   severeConditions: RiskAnswer;
   penileConditions: RiskAnswer;
@@ -133,15 +132,14 @@ const FORM_QUESTIONS: FormQuestion[] = [
   {
     id: "highBpOrAlphaBlockers",
     section: "Cardiovascular",
-    kind: "multi",
+    kind: "binary",
     required: true,
     label:
       "Do you have uncontrolled high blood pressure, or do you take alpha-blockers such as Flomax (tamsulosin)?",
     helperText: "Some blood pressure and prostate medications can interact with treatment.",
     options: [
+      { value: "yes", label: "Yes" },
       { value: "no", label: "No" },
-      { value: "yes_controlled_or_alpha_blocker", label: "Yes, controlled BP or on alpha-blocker" },
-      { value: "yes_uncontrolled", label: "Yes, uncontrolled high blood pressure" },
     ],
   },
   {

@@ -10,11 +10,20 @@
     }
   },
   "id": "a7c1f2fc-d4ed-4d79-84e0-595e2aed20cd",
-  "messages": [],
+  "messages": [
+    {
+      "content": "Sorry, I am unable to continue this call right now. Please try again in a moment.",
+      "type": "request-failed"
+    },
+    {
+      "content": "Thank you. Continuing now.",
+      "type": "request-response-delayed"
+    }
+  ],
   "orgId": "6ab163d1-11bf-478f-834e-9a079a8df0e0",
   "server": {
     "url": "https://aspargolabs-demo.vercel.app/api/vapi-tools"
   },
   "type": "function",
-  "updatedAt": "2026-04-29T09:54:59.571Z"
+  "updatedAt": "2026-04-29T10:28:03.872Z"
 }

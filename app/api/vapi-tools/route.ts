@@ -32,6 +32,7 @@ type VapiToolRequest = {
 };
 
 const ARTIFACT_LOG_MAX_CHARS = 24_000;
+const VAPI_TOOLS_DEBUG = process.env.VAPI_TOOLS_DEBUG === "true";
 
 function safeJsonForLog(value: unknown): string {
   try {
@@ -78,6 +79,8 @@ function logToolCallArtifactDebug(input: {
   toolArguments: Record<string, unknown>;
   resolvedTranscript: string;
 }): void {
+  if (!VAPI_TOOLS_DEBUG) return;
+
   const assistantSnippet = assistantArtifactPlanSnippet(input.message?.assistant);
   console.log(
     "[vapi-tools] ─── tool call ─── callId=%s toolCallId=%s message.type=%s",

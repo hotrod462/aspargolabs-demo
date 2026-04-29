@@ -6,7 +6,7 @@ type IntakeFormPayload = {
   usesNitratesOrPoppers?: "yes" | "no";
   recentCardioEvent?: "yes" | "no";
   chestPainOrShortnessOfBreath?: "no" | "mild_on_exertion" | "frequent_or_severe";
-  highBpOrAlphaBlockers?: "no" | "yes_controlled_or_alpha_blocker" | "yes_uncontrolled";
+  highBpOrAlphaBlockers?: "yes" | "no";
   recentNormalBp?: "normal" | "low" | "high";
   severeConditions?: "yes" | "no";
   penileConditions?: "yes" | "no";
@@ -38,8 +38,7 @@ function toChestSymptomsBoolean(value: IntakeFormPayload["chestPainOrShortnessOf
 }
 
 function toHighBpBoolean(value: IntakeFormPayload["highBpOrAlphaBlockers"]) {
-  if (!value) return null;
-  return value !== "no";
+  return toBooleanAnswer(value);
 }
 
 function normalizeList(value: string[] | undefined) {

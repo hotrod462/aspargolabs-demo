@@ -39,6 +39,38 @@ function isActiveIntakeState(state: string): state is IntakeState {
   return (INTAKE_STATES as readonly string[]).includes(state);
 }
 
+/** Persist exactly what the voice layer should speak / whether to end the call (matches tool API result). */
+async function persistAssistantTurn(
+  store: IntakeStore,
+  sessionId: string,
+  input: ProcessTurnInput,
+  result: ProcessTurnResult,
+): Promise<void> {
+  await store.saveEvent({
+    session_id: sessionId,
+    event_type: "assistant_turn",
+    payload: {
+      say: result.say,
+      end_call: result.end_call,
+      state: result.state,
+      status: result.status,
+      note:
+        "Speak `say` to the caller. If `end_call` is true, end the call after speaking (Vapi/end-call tool).",
+    },
+    idempotency_key: input.toolCallId ? `tool:${input.toolCallId}:assistant` : null,
+  });
+}
+
+async function withAssistantLogged(
+  store: IntakeStore,
+  sessionId: string,
+  input: ProcessTurnInput,
+  result: ProcessTurnResult,
+): Promise<ProcessTurnResult> {
+  await persistAssistantTurn(store, sessionId, input, result);
+  return result;
+}
+
 export async function processIntakeTurn(
   store: IntakeStore,
   input: ProcessTurnInput,
@@ -52,12 +84,12 @@ export async function processIntakeTurn(
     }));
 
   if (!isActiveIntakeState(session.current_state)) {
-    return {
+    return withAssistantLogged(store, session.id, input, {
       say: "This intake has already ended. Thank you for calling.",
       end_call: true,
       state: session.current_state as AnyState,
       status: session.status,
-    };
+    });
   }
 
   const currentState = session.current_state;
@@ -102,7 +134,12 @@ export async function processIntakeTurn(
       ended_at: new Date().toISOString(),
       hard_stop_reason: "current_emergency_symptoms",
     });
-    return { say, end_call: true, state: "emergency_end", status: "emergency" };
+    return withAssistantLogged(store, session.id, input, {
+      say,
+      end_call: true,
+      state: "emergency_end",
+      status: "emergency",
+    });
   }
 
   if (extraction.interrupt === "proxy_caller") {
@@ -115,25 +152,30 @@ export async function processIntakeTurn(
       ended_at: new Date().toISOString(),
       hard_stop_reason: "proxy_caller",
     });
-    return { say, end_call: true, state: "proxy_caller_end", status: "proxy_caller" };
+    return withAssistantLogged(store, session.id, input, {
+      say,
+      end_call: true,
+      state: "proxy_caller_end",
+      status: "proxy_caller",
+    });
   }
 
   if (extraction.interrupt === "privacy_question") {
-    return {
+    return withAssistantLogged(store, session.id, input, {
       say: `I am an AI clinical intake assistant, and this intake is used for clinician review. ${stateConfig.question}`,
       end_call: false,
       state: currentState,
       status: session.status,
-    };
+    });
   }
 
   if (extraction.interrupt === "medical_advice") {
-    return {
+    return withAssistantLogged(store, session.id, input, {
       say: `I cannot give medical advice, but I will make sure the doctor sees that in your file. ${stateConfig.question}`,
       end_call: false,
       state: currentState,
       status: session.status,
-    };
+    });
   }
 
   if (extraction.interrupt === "human_escalation") {
@@ -147,27 +189,32 @@ export async function processIntakeTurn(
       hard_stop_reason: "human_escalation",
       needs_review: true,
     });
-    return { say, end_call: true, state: "needs_review", status: "needs_review" };
+    return withAssistantLogged(store, session.id, input, {
+      say,
+      end_call: true,
+      state: "needs_review",
+      status: "needs_review",
+    });
   }
 
   if (extraction.interrupt === "clarification") {
-    return {
+    return withAssistantLogged(store, session.id, input, {
       say:
         extraction.suggestedSay ??
         `Sorry for the confusion. ${stateConfig.question}`,
       end_call: false,
       state: currentState,
       status: session.status,
-    };
+    });
   }
 
   if (extraction.interrupt === "repeat_question") {
-    return {
+    return withAssistantLogged(store, session.id, input, {
       say: extraction.suggestedSay ?? stateConfig.question,
       end_call: false,
       state: currentState,
       status: session.status,
-    };
+    });
   }
 
   if (extraction.interrupt === "audio_unclear") {
@@ -178,14 +225,14 @@ export async function processIntakeTurn(
       confidence: extraction.confidence,
       evidence: extraction.evidence || input.transcript,
     });
-    return {
+    return withAssistantLogged(store, session.id, input, {
       say:
         extraction.suggestedSay ??
         `I didn't quite catch that. Could you say that again? ${stateConfig.question}`,
       end_call: false,
       state: currentState,
       status: session.status,
-    };
+    });
   }
 
   if (extraction.answer === "unclear" || extraction.confidence < 0.7) {
@@ -196,12 +243,14 @@ export async function processIntakeTurn(
       confidence: extraction.confidence,
       evidence: extraction.evidence || input.transcript,
     });
-    return {
-      say: extraction.suggestedSay ?? `To ensure your safety, I need a definitive answer. ${stateConfig.question}`,
+    return withAssistantLogged(store, session.id, input, {
+      say:
+        extraction.suggestedSay ??
+        `To ensure your safety, I need a definitive answer. ${stateConfig.question}`,
       end_call: false,
       state: currentState,
       status: session.status,
-    };
+    });
   }
 
   const transitionKey = transitionKeyFromAnswer(extraction.answer);
@@ -232,14 +281,19 @@ export async function processIntakeTurn(
       (nextState === "completed"
         ? "Thank you, that is all the medical information I need. I am sending your file to our licensed doctor for review."
         : "I cannot proceed with this intake. I am going to end the call now.");
-    return { say, end_call: true, state: nextState, status };
+    return withAssistantLogged(store, session.id, input, {
+      say,
+      end_call: true,
+      state: nextState,
+      status,
+    });
   }
 
   const nextConfig = FSM_CONFIG[nextState as IntakeState];
-  return {
+  return withAssistantLogged(store, session.id, input, {
     say: nextConfig.question,
     end_call: false,
     state: nextState,
     status,
-  };
+  });
 }

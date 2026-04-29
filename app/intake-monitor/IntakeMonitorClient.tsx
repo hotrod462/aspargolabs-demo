@@ -24,6 +24,13 @@ function summarizeEvent(event: IntakeEvent): string {
       const st = typeof p.state === "string" ? p.state : "";
       return st ? `${st}: ${parts.join(", ")}` : parts.join(", ") || "Extraction";
     }
+    case "assistant_turn": {
+      const say = typeof p.say === "string" ? p.say : "";
+      const clip = say.length > 160 ? `${say.slice(0, 160)}…` : say;
+      const ec = p.end_call === true ? "end_call" : "continue";
+      const st = typeof p.state === "string" ? p.state : "";
+      return `Speak (${ec}) state=${st}: “${clip}”`;
+    }
     case "final_reconciliation":
       return `Reconciliation (${typeof p.source === "string" ? p.source : "?"})`;
     default:
@@ -80,6 +87,7 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
   const loadEvents = useCallback(
     async (sessionId: string) => {
       setEventsLoading(true);
+      setEvents([]);
       setEventsError(null);
       const { data, error } = await supabase
         .from("intake_events")
@@ -99,12 +107,11 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
   );
 
   useEffect(() => {
-    if (!selectedId) {
-      setEvents([]);
-      return;
-    }
+    if (!selectedId) return;
 
-    void loadEvents(selectedId);
+    queueMicrotask(() => {
+      void loadEvents(selectedId);
+    });
 
     const channel = supabase
       .channel(`intake-events-${selectedId}`)

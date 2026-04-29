@@ -28,6 +28,8 @@ export function integrationRunCount(): number {
 }
 
 export interface OrchestrationStep {
+  /** Optional label for logs / docs only. */
+  label?: string;
   transcript: string;
 }
 

@@ -1,6 +1,9 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { intakeModel } from "@/lib/llm/groq";
+import {
+  intakeGenerateTextProviderOptions,
+  intakeModel,
+} from "@/lib/llm/intake-model";
 import { FSM_CONFIG } from "./fsm";
 import { FIELD_KEYS } from "./schema";
 import type { FieldKey, IntakeState } from "./schema";
@@ -38,7 +41,7 @@ export type TurnExtraction = z.infer<typeof turnExtractionSchema>;
 
 export interface ExtractIntakeTurnResult {
   extraction: TurnExtraction;
-  /** Round-trip latency for Groq `generateText` (structured extraction), milliseconds. */
+  /** Round-trip latency for intake `generateText` (structured extraction), milliseconds. */
   llmLatencyMs: number;
 }
 
@@ -53,12 +56,7 @@ export async function extractIntakeTurn(input: {
   const result = await generateText({
     model: intakeModel,
     output: Output.object({ schema: turnExtractionSchema }),
-    providerOptions: {
-      groq: {
-        structuredOutputs: true,
-        strictJsonSchema: true,
-      },
-    },
+    providerOptions: intakeGenerateTextProviderOptions(),
     system: [
       "You are a bounded clinical intake extraction helper.",
       "Return only the requested JSON object.",

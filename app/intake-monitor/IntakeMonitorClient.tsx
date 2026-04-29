@@ -8,8 +8,14 @@ import {
   SYNTHETIC_SIGNAL_IDS,
   summarizeCallSignalsFromEvents,
 } from "@/lib/intake/monitor-extraction";
-import { CALL_STATUSES, INTAKE_STATES, TERMINAL_STATES, type CallStatus } from "@/lib/intake/schema";
-import type { CallSession, IntakeEvent } from "@/lib/storage/intake-store";
+import {
+  CALL_STATUSES,
+  FIELD_KEYS,
+  INTAKE_STATES,
+  TERMINAL_STATES,
+  type CallStatus,
+} from "@/lib/intake/schema";
+import type { CallSession, IntakeEvent, IntakeField } from "@/lib/storage/intake-store";
 import { createClient } from "@/utils/supabase/client";
 
 function formatMsPretty(ms: number): string {
@@ -355,8 +361,184 @@ function statesFromTranscriptEvents(events: IntakeEvent[]): string[] {
   return out;
 }
 
-export function IntakeMonitorClient({ initialSessions }: { initialSessions: CallSession[] }) {
+type FieldSlotKind = "collected" | "open" | "issue";
+
+function classifyIntakeFieldSlot(field: IntakeField | undefined): FieldSlotKind {
+  if (!field) return "open";
+  switch (field.status) {
+    case "confirmed":
+    case "captured":
+    case "skipped":
+      return "collected";
+    case "unclear":
+    case "error":
+      return "issue";
+    default:
+      return "open";
+  }
+}
+
+function fieldRowByKey(fields: IntakeField[]): Map<string, IntakeField> {
+  const m = new Map<string, IntakeField>();
+  for (const f of fields) m.set(f.field_key, f);
+  return m;
+}
+
+function formatFieldKeyLabel(key: string): string {
+  return key.replace(/_/g, " ");
+}
+
+function mergeFieldsRecord(prev: Record<string, IntakeField[]>, row: IntakeField): Record<string, IntakeField[]> {
+  const sid = row.session_id;
+  const list = [...(prev[sid] ?? [])];
+  const idx = list.findIndex((x) => x.field_key === row.field_key);
+  if (idx >= 0) list[idx] = row;
+  else list.push(row);
+  return { ...prev, [sid]: list };
+}
+
+function removeFieldsRow(
+  prev: Record<string, IntakeField[]>,
+  sessionId: string,
+  fieldKey: string,
+): Record<string, IntakeField[]> {
+  const list = (prev[sessionId] ?? []).filter((x) => x.field_key !== fieldKey);
+  return { ...prev, [sessionId]: list };
+}
+
+function intakeFieldSummary(fields: IntakeField[]): {
+  collected: number;
+  issue: number;
+  total: number;
+} {
+  const byKey = fieldRowByKey(fields);
+  let collected = 0;
+  let issue = 0;
+  for (const key of FIELD_KEYS) {
+    const kind = classifyIntakeFieldSlot(byKey.get(key));
+    if (kind === "collected") collected++;
+    else if (kind === "issue") issue++;
+  }
+  return { collected, issue, total: FIELD_KEYS.length };
+}
+
+function IntakeFieldsProgressStrip({ fields }: { fields: IntakeField[] }) {
+  const { collected, issue, total } = intakeFieldSummary(fields);
+  const byKey = fieldRowByKey(fields);
+  return (
+    <div className="mt-2 border-t border-black/10 pt-2 dark:border-white/15">
+      <p className="text-[10px] leading-snug text-zinc-500 dark:text-zinc-400">
+        Intake fields{" "}
+        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+          {collected}/{total}
+        </span>{" "}
+        collected
+        {issue > 0 ? (
+          <span className="text-amber-700 dark:text-amber-400"> · {issue} need attention</span>
+        ) : null}
+      </p>
+      <div className="mt-1 flex flex-wrap gap-0.5" aria-label="Intake field slots">
+        {FIELD_KEYS.map((key) => {
+          const kind = classifyIntakeFieldSlot(byKey.get(key));
+          const dot =
+            kind === "collected"
+              ? "bg-emerald-500 dark:bg-emerald-400"
+              : kind === "issue"
+                ? "bg-amber-500 dark:bg-amber-300"
+                : "bg-zinc-300 dark:bg-zinc-600";
+          const kindLabel = kind === "collected" ? "Collected" : kind === "issue" ? "Unclear or error" : "Not collected yet";
+          return (
+            <span
+              key={key}
+              title={`${formatFieldKeyLabel(key)}: ${kindLabel}`}
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function IntakeFieldsDetailPanel({ fields }: { fields: IntakeField[] }) {
+  const byKey = fieldRowByKey(fields);
+  const { collected, issue, total } = intakeFieldSummary(fields);
+
+  return (
+    <div className="mt-6 rounded-xl border border-black/10 bg-white p-4 dark:border-white/15 dark:bg-zinc-950/40">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
+        Intake fields (database)
+      </h3>
+      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+        Rows from <code className="rounded bg-zinc-100 px-1 text-[11px] dark:bg-zinc-800">intake_fields</code>.{" "}
+        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+          {collected}/{total}
+        </span>{" "}
+        collected
+        {issue > 0 ? (
+          <span className="text-amber-700 dark:text-amber-400"> · {issue} unclear or error</span>
+        ) : null}
+        . Green dot strip in the call list matches this checklist (hover dots for names).
+      </p>
+      <div className="mt-3 overflow-x-auto rounded-lg border border-black/10 dark:border-white/15">
+        <table className="w-full min-w-[36rem] border-collapse text-left text-xs">
+          <thead className="bg-zinc-100 dark:bg-zinc-900">
+            <tr>
+              <th className="border border-black/10 px-2 py-1.5 font-medium dark:border-white/15">Field</th>
+              <th className="border border-black/10 px-2 py-1.5 font-medium dark:border-white/15">Collected</th>
+              <th className="border border-black/10 px-2 py-1.5 font-medium dark:border-white/15">Status</th>
+              <th className="border border-black/10 px-2 py-1.5 font-medium dark:border-white/15">Value</th>
+              <th className="border border-black/10 px-2 py-1.5 font-medium dark:border-white/15">Confidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {FIELD_KEYS.map((key) => {
+              const row = byKey.get(key);
+              const kind = classifyIntakeFieldSlot(row);
+              const collectedLabel =
+                kind === "collected" ? "Yes" : kind === "issue" ? "Needs attention" : "Not yet";
+              const collectedCls =
+                kind === "collected"
+                  ? "text-emerald-800 dark:text-emerald-200"
+                  : kind === "issue"
+                    ? "text-amber-800 dark:text-amber-200"
+                    : "text-zinc-500 dark:text-zinc-400";
+              return (
+                <tr key={key} className="align-top">
+                  <td className="border border-black/10 px-2 py-1.5 font-medium text-zinc-800 dark:border-white/15 dark:text-zinc-200">
+                    {formatFieldKeyLabel(key)}
+                  </td>
+                  <td className={`border border-black/10 px-2 py-1.5 dark:border-white/15 ${collectedCls}`}>
+                    {collectedLabel}
+                  </td>
+                  <td className="border border-black/10 px-2 py-1.5 font-mono text-[11px] dark:border-white/15">
+                    {row?.status ?? "—"}
+                  </td>
+                  <td className="max-w-[14rem] border border-black/10 px-2 py-1.5 font-mono text-[11px] break-words whitespace-pre-wrap dark:border-white/15">
+                    {row ? fmt(row.value) : "—"}
+                  </td>
+                  <td className="border border-black/10 px-2 py-1.5 font-mono dark:border-white/15">
+                    {row?.confidence != null ? row.confidence.toFixed(3) : "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export function IntakeMonitorClient({
+  initialSessions,
+  initialFieldsBySessionId,
+}: {
+  initialSessions: CallSession[];
+  initialFieldsBySessionId: Record<string, IntakeField[]>;
+}) {
   const [sessions, setSessions] = useState(initialSessions);
+  const [fieldsBySessionId, setFieldsBySessionId] = useState(initialFieldsBySessionId);
   const [selectedId, setSelectedId] = useState<string | null>(initialSessions[0]?.id ?? null);
   const [events, setEvents] = useState<IntakeEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
@@ -418,6 +600,11 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
     return sessions.find((session) => session.id === resolvedSelectedId) ?? null;
   }, [sessions, resolvedSelectedId]);
 
+  const selectedFields = useMemo(() => {
+    if (!resolvedSelectedId) return [];
+    return fieldsBySessionId[resolvedSelectedId] ?? [];
+  }, [fieldsBySessionId, resolvedSelectedId]);
+
   useEffect(() => {
     const channel = supabase
       .channel("intake-monitor-sessions")
@@ -432,6 +619,34 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
             return [next, ...withoutCurrent].sort((a, b) => b.started_at.localeCompare(a.started_at));
           });
           setSelectedId((current) => current ?? next.id);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("intake-monitor-fields")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "intake_fields" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const oldRow = payload.old as { session_id?: string; field_key?: string };
+            if (oldRow.session_id && oldRow.field_key) {
+              setFieldsBySessionId((prev) =>
+                removeFieldsRow(prev, oldRow.session_id!, oldRow.field_key!),
+              );
+            }
+            return;
+          }
+          const row = payload.new as IntakeField;
+          if (!row?.session_id || !row.field_key) return;
+          setFieldsBySessionId((prev) => mergeFieldsRecord(prev, row));
         },
       )
       .subscribe();
@@ -635,6 +850,7 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
                     </span>
                     <span className="text-[11px] text-zinc-500">{session.current_state}</span>
                   </div>
+                  <IntakeFieldsProgressStrip fields={fieldsBySessionId[session.id] ?? []} />
                 </button>
               );
             })
@@ -768,6 +984,8 @@ export function IntakeMonitorClient({ initialSessions }: { initialSessions: Call
                   </p>
                 </div>
               )}
+
+              <IntakeFieldsDetailPanel fields={selectedFields} />
 
               <div className="mt-8">
                 <h3 className="mb-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">FSM progress</h3>

@@ -1,6 +1,6 @@
 import { extractIntakeTurn, type TurnExtraction } from "./extractor";
 import { buildTurnExtractionErrorPayload } from "./serialize-ai-extraction-error";
-import { INTAKE_LLM_MODEL_ID } from "@/lib/llm/groq";
+import { INTAKE_LLM_MODEL_ID } from "@/lib/llm/intake-model";
 import { completionPct, FSM_CONFIG, type TransitionKey } from "./fsm";
 import { INTAKE_STATES, type AnyState, CallStatus, IntakeState } from "./schema";
 import type { IntakeStore } from "@/lib/storage/intake-store";

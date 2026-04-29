@@ -3,21 +3,28 @@ import { inspect } from "node:util";
 
 import { processIntakeTurn } from "@/lib/intake/orchestrator";
 import type { ProcessTurnResult } from "@/lib/intake/orchestrator";
+import { intakeLlmBackend } from "@/lib/llm/intake-model";
 import type { CallStatus } from "@/lib/intake/schema";
 import { intakeStore } from "@/lib/storage/supabase-intake-store";
 
-const REQUIRED = [
-  "GROQ_API_KEY",
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
-] as const;
+function requiredIntakeLlmKey(): "GROQ_API_KEY" | "GOOGLE_GENERATIVE_AI_API_KEY" {
+  return intakeLlmBackend() === "groq" ? "GROQ_API_KEY" : "GOOGLE_GENERATIVE_AI_API_KEY";
+}
+
+function requiredIntegrationEnvKeys(): readonly string[] {
+  return [
+    requiredIntakeLlmKey(),
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ];
+}
 
 export function integrationEnvReady(): boolean {
-  return REQUIRED.every((k) => process.env[k] && String(process.env[k]).trim().length > 0);
+  return requiredIntegrationEnvKeys().every((k) => process.env[k] && String(process.env[k]).trim().length > 0);
 }
 
 export function missingEnvMessage(): string {
-  const missing = REQUIRED.filter((k) => !process.env[k] || !String(process.env[k]).trim());
+  const missing = requiredIntegrationEnvKeys().filter((k) => !process.env[k] || !String(process.env[k]).trim());
   return `Skip: set in .env.local: ${missing.join(", ")}`;
 }
 
@@ -44,7 +51,7 @@ function integrationVerbose(): boolean {
   return process.env.INTEGRATION_VERBOSE === "1";
 }
 
-/** Optional pause between Groq calls (helps avoid TPM limits on large suites). `INTEGRATION_STEP_DELAY_MS`. */
+/** Optional pause between LLM calls (helps avoid rate limits on large suites). `INTEGRATION_STEP_DELAY_MS`. */
 function integrationStepDelayMs(): number {
   const raw = process.env.INTEGRATION_STEP_DELAY_MS;
   const n = raw != null ? Number.parseInt(String(raw), 10) : 0;
@@ -56,13 +63,13 @@ function integrationStepDelayMs(): number {
  * Returns the last turn result and the final session row from the store.
  *
  * On errors, prints `[itest] FAIL …` with turn index (1-based), label, `stateBefore`, transcript
- * preview, message, optional `cause`, and deep `inspect(err)` (schema/Groq failures may nest under
+ * preview, message, optional `cause`, and deep `inspect(err)` (schema/LLM failures may nest under
  * `cause`).
  *
  * Per-turn `[itest] … start/ok` lines need `INTEGRATION_VERBOSE=1`; use `vitest --reporter=verbose`
  * if stdout does not appear (default reporter may omit it).
  *
- * **`INTEGRATION_STEP_DELAY_MS`**: optional pause (ms) between successful turns to reduce Groq TPM
+ * **`INTEGRATION_STEP_DELAY_MS`**: optional pause (ms) between successful turns to reduce LLM TPM
  * rate-limit hits on long multi-turn suites.
  */
 export async function runOrchestrationScenario(

@@ -102,20 +102,11 @@ function formatStartedRelativeAgo(iso: string, nowMs: number): string {
   return `${d}d ago`;
 }
 
-/** Wall-clock start time for calls after the five most recent in the list. */
-function formatStartedAbsolute(iso: string): string {
+/** Stable local datetime for timestamps used as primary call identity (list + fallback title). */
+function formatStartedDateTime(iso: string): string {
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return "—";
-  const y = d.getFullYear();
-  const nowY = new Date().getFullYear();
-  const opts: Intl.DateTimeFormatOptions = {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  };
-  if (y !== nowY) opts.year = "numeric";
-  return d.toLocaleString(undefined, opts);
+  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
 /** Sum persisted per-turn extraction LLM durations (fallback when metadata not yet synced). */
@@ -829,8 +820,8 @@ export function IntakeMonitorClient({
     : false;
 
   return (
-    <main className="mx-auto flex max-w-7xl gap-6 px-6 py-10">
-      <aside className="w-80 shrink-0 rounded-2xl border border-black/10 p-4 dark:border-white/15">
+    <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:gap-8 lg:py-10">
+      <aside className="w-full shrink-0 rounded-2xl border border-black/10 p-3 sm:p-4 dark:border-white/15 lg:w-80 lg:min-w-0">
         <h1 className="text-xl font-semibold">Intake Calls</h1>
         <p className="mt-1 text-xs text-zinc-500">Showing counts for the newest {sessions.length} calls loaded.</p>
 
@@ -880,28 +871,26 @@ export function IntakeMonitorClient({
           ) : sortedFilteredSessions.length === 0 ? (
             <p className="text-sm text-zinc-500">Nothing matches · select more statuses.</p>
           ) : (
-            sortedFilteredSessions.map((session, index) => {
+            sortedFilteredSessions.map((session) => {
               const active = resolvedSelectedId === session.id;
-              const startedLabel =
-                index < 5
-                  ? `Started ${formatStartedRelativeAgo(session.started_at, nowTick)}`
-                  : `Started ${formatStartedAbsolute(session.started_at)}`;
               return (
                 <button
                   key={session.id}
                   type="button"
                   onClick={() => setSelectedId(session.id)}
-                  className={`block w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
+                  className={`block w-full min-h-[3rem] rounded-xl border px-3 py-3 text-left text-sm transition sm:min-h-0 sm:py-2 ${
                     active
                       ? "border-zinc-950 ring-2 ring-zinc-950 dark:border-white dark:ring-white"
                       : "border-black/10 dark:border-white/15"
                   }`}
                 >
-                  <div className="font-medium">{session.patient_phone ?? session.call_id}</div>
-                  <p className="mt-0.5 font-mono text-[11px] leading-snug text-zinc-500 tabular-nums">
-                    {startedLabel}
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <div className="font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+                    {formatStartedDateTime(session.started_at)}
+                  </div>
+                  {session.patient_phone ? (
+                    <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">{session.patient_phone}</p>
+                  ) : null}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${callStatusBadgeClass(
                         session.status as CallStatus,
@@ -909,7 +898,6 @@ export function IntakeMonitorClient({
                     >
                       {session.status.replace(/_/g, " ")}
                     </span>
-                    <span className="text-[11px] text-zinc-500">{session.current_state}</span>
                   </div>
                   <IntakeFieldsProgressStrip fields={fieldsBySessionId[session.id] ?? []} />
                 </button>
@@ -919,27 +907,31 @@ export function IntakeMonitorClient({
         </div>
       </aside>
 
-      <section className="min-w-0 flex-1 space-y-8">
+      <section className="min-w-0 flex-1 space-y-6 lg:space-y-8">
         {sessions.length === 0 ? (
-          <div className="rounded-2xl border border-black/10 p-8 dark:border-white/15">
+          <div className="rounded-2xl border border-black/10 p-6 dark:border-white/15 sm:p-8">
             <p className="text-zinc-600 dark:text-zinc-300">No intake sessions recorded yet.</p>
           </div>
         ) : !selected ? (
-          <div className="rounded-2xl border border-black/10 p-8 dark:border-white/15">
+          <div className="rounded-2xl border border-black/10 p-6 dark:border-white/15 sm:p-8">
             <p className="text-zinc-600 dark:text-zinc-300">
               No sessions match the current filter. Select more statuses in the sidebar, or reset the filter.
             </p>
           </div>
         ) : (
           <>
-            <div className="rounded-2xl border border-black/10 p-6 dark:border-white/15">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-semibold">{selected.patient_phone ?? "Unknown caller"}</h2>
-                  <p className="text-sm text-zinc-500">{selected.call_id}</p>
+            <div className="rounded-2xl border border-black/10 p-4 dark:border-white/15 sm:p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0">
+                  <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                    {selected.patient_phone ?? formatStartedDateTime(selected.started_at)}
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                    Started {formatStartedRelativeAgo(selected.started_at, nowTick)}
+                  </p>
                 </div>
                 <div
-                  className={`rounded-full px-3 py-1 text-sm font-semibold capitalize ${callStatusBadgeClass(
+                  className={`shrink-0 self-start rounded-full px-3 py-1 text-sm font-semibold capitalize ${callStatusBadgeClass(
                     selected.status as CallStatus,
                   )}`}
                 >
@@ -959,89 +951,6 @@ export function IntakeMonitorClient({
                   />
                 </div>
               </div>
-
-              {timingPanel && (
-                <MonitorCollapsible defaultOpen={false} title="Timing & throughput">
-                  <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                    <div>
-                      <dt className="text-xs text-zinc-500">Call wall time</dt>
-                      <dd className="text-zinc-900 dark:text-zinc-100">
-                        {timingPanel.wallAvailable && timingPanel.callWallClockMs != null ? (
-                          <>
-                            <span className="font-mono">{formatMsPretty(timingPanel.callWallClockMs)}</span>
-                            <span className="ml-2 text-[11px] text-zinc-500">
-                              (started {new Date(selected.started_at).toLocaleString()}
-                              {selected.ended_at
-                                ? ` → ended ${new Date(selected.ended_at).toLocaleString()}`
-                                : ""}
-                              )
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-sm text-zinc-600 dark:text-zinc-300">
-                            Unavailable — call hasn&apos;t completed yet (no ended_at).
-                          </span>
-                        )}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-zinc-500">LLM extraction — total</dt>
-                      <dd className="font-mono text-zinc-900 dark:text-zinc-100">
-                        {timingPanel.llmTotalEffective != null
-                          ? formatMsPretty(timingPanel.llmTotalEffective)
-                          : "—"}{" "}
-                        <span className="text-[11px] text-zinc-500">
-                          {timingPanel.extractionTurns != null ? `· ${timingPanel.extractionTurns} turn(s)` : ""}
-                        </span>
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-zinc-500">Avg extraction latency / turn</dt>
-                      <dd className="font-mono text-zinc-900 dark:text-zinc-100">
-                        {timingPanel.avgMs != null ? formatMsPretty(timingPanel.avgMs) : "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-zinc-500">Last extraction</dt>
-                      <dd className="font-mono text-zinc-900 dark:text-zinc-100">
-                        {timingPanel.lastMs != null ? formatMsPretty(timingPanel.lastMs) : "—"}
-                      </dd>
-                    </div>
-                    <div className="sm:col-span-2 border-t border-black/10 pt-2 dark:border-white/15">
-                      <dt className="text-xs text-zinc-500">Approx. non-LLM time (wall − LLM extraction sum)</dt>
-                      <dd className="font-mono text-xs text-zinc-800 dark:text-zinc-200">
-                        {timingPanel.wallAvailable &&
-                        timingPanel.callWallClockMs != null &&
-                        timingPanel.llmTotalEffective != null ? (
-                          <>
-                            {formatMsPretty(
-                              Math.max(0, timingPanel.callWallClockMs - timingPanel.llmTotalEffective),
-                            )}{" "}
-                            <span className="text-[11px] text-zinc-500">
-                              (orchestration, DB, voice platform; rough)
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-sm font-normal text-zinc-600 dark:text-zinc-300">
-                            Unavailable — call hasn&apos;t completed yet.
-                          </span>
-                        )}
-                      </dd>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <dt className="text-xs text-zinc-500">Model (from session metadata)</dt>
-                      <dd className="font-mono text-xs text-zinc-800 dark:text-zinc-200">
-                        {timingPanel.model ?? "—"}
-                      </dd>
-                    </div>
-                  </dl>
-                  <p className="mt-3 text-[11px] text-zinc-500">
-                    Totals update on <code className="rounded bg-zinc-200/70 px-1 dark:bg-zinc-800">call_sessions.metadata</code> after each
-                    successful extraction. Event rows also store <code className="rounded bg-zinc-200/70 px-1 dark:bg-zinc-800">llm_latency_ms</code>{" "}
-                    per turn for cross-checking pipelines (Vapi, alternate models, etc.).
-                  </p>
-                </MonitorCollapsible>
-              )}
 
               <MonitorCollapsible
                 defaultOpen
@@ -1169,6 +1078,89 @@ export function IntakeMonitorClient({
                   extractor error. Inactive chips are shown dimmed so you can see everything the model might surface.
                 </p>
               </MonitorCollapsible>
+
+              {timingPanel && (
+                <MonitorCollapsible defaultOpen={false} title="Timing & throughput">
+                  <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs text-zinc-500">Call wall time</dt>
+                      <dd className="text-zinc-900 dark:text-zinc-100">
+                        {timingPanel.wallAvailable && timingPanel.callWallClockMs != null ? (
+                          <>
+                            <span className="font-mono">{formatMsPretty(timingPanel.callWallClockMs)}</span>
+                            <span className="ml-2 text-[11px] text-zinc-500">
+                              (started {new Date(selected.started_at).toLocaleString()}
+                              {selected.ended_at
+                                ? ` → ended ${new Date(selected.ended_at).toLocaleString()}`
+                                : ""}
+                              )
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-sm text-zinc-600 dark:text-zinc-300">
+                            Unavailable — call hasn&apos;t completed yet (no ended_at).
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-zinc-500">LLM extraction — total</dt>
+                      <dd className="font-mono text-zinc-900 dark:text-zinc-100">
+                        {timingPanel.llmTotalEffective != null
+                          ? formatMsPretty(timingPanel.llmTotalEffective)
+                          : "—"}{" "}
+                        <span className="text-[11px] text-zinc-500">
+                          {timingPanel.extractionTurns != null ? `· ${timingPanel.extractionTurns} turn(s)` : ""}
+                        </span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-zinc-500">Avg extraction latency / turn</dt>
+                      <dd className="font-mono text-zinc-900 dark:text-zinc-100">
+                        {timingPanel.avgMs != null ? formatMsPretty(timingPanel.avgMs) : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-zinc-500">Last extraction</dt>
+                      <dd className="font-mono text-zinc-900 dark:text-zinc-100">
+                        {timingPanel.lastMs != null ? formatMsPretty(timingPanel.lastMs) : "—"}
+                      </dd>
+                    </div>
+                    <div className="sm:col-span-2 border-t border-black/10 pt-2 dark:border-white/15">
+                      <dt className="text-xs text-zinc-500">Approx. non-LLM time (wall − LLM extraction sum)</dt>
+                      <dd className="font-mono text-xs text-zinc-800 dark:text-zinc-200">
+                        {timingPanel.wallAvailable &&
+                        timingPanel.callWallClockMs != null &&
+                        timingPanel.llmTotalEffective != null ? (
+                          <>
+                            {formatMsPretty(
+                              Math.max(0, timingPanel.callWallClockMs - timingPanel.llmTotalEffective),
+                            )}{" "}
+                            <span className="text-[11px] text-zinc-500">
+                              (orchestration, DB, voice platform; rough)
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-sm font-normal text-zinc-600 dark:text-zinc-300">
+                            Unavailable — call hasn&apos;t completed yet.
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <dt className="text-xs text-zinc-500">Model (from session metadata)</dt>
+                      <dd className="font-mono text-xs text-zinc-800 dark:text-zinc-200">
+                        {timingPanel.model ?? "—"}
+                      </dd>
+                    </div>
+                  </dl>
+                  <p className="mt-3 text-[11px] text-zinc-500">
+                    Totals update on <code className="rounded bg-zinc-200/70 px-1 dark:bg-zinc-800">call_sessions.metadata</code> after each
+                    successful extraction. Event rows also store <code className="rounded bg-zinc-200/70 px-1 dark:bg-zinc-800">llm_latency_ms</code>{" "}
+                    per turn for cross-checking pipelines (Vapi, alternate models, etc.).
+                  </p>
+                </MonitorCollapsible>
+              )}
             </div>
 
             <MonitorCollapsible

@@ -13,8 +13,8 @@
   "messages": [],
   "orgId": "6ab163d1-11bf-478f-834e-9a079a8df0e0",
   "server": {
-    "url": "https://nonprovincial-unsmoking-winifred.ngrok-free.dev/api/vapi-tools"
+    "url": "https://aspargolabs-demo.vercel.app/api/vapi-tools"
   },
   "type": "function",
-  "updatedAt": "2026-04-29T08:55:06.404Z"
+  "updatedAt": "2026-04-29T09:54:59.571Z"
 }

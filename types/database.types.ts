@@ -7,8 +7,8 @@ export type Json =
   | Json[];
 
 /**
- * Lightweight DB typing to unblock compilation.
- * Replace with `npx supabase gen types typescript ... > types/database.types.ts`.
+ * Hand-maintained to match `supabase/migrations/20260428111900_intake_schema.sql`.
+ * Regenerate with: `npm run db:gen-types` when linked to a project.
  */
 export type Database = {
   public: {
@@ -69,10 +69,10 @@ export type Database = {
           id: string;
           session_id: string;
           field_key: string;
-          value: string | null;
+          value: Json | null;
           status: string;
           confidence: number | null;
-          source: string | null;
+          source: string;
           evidence: string | null;
           confirmed_at: string | null;
           created_at: string;
@@ -82,10 +82,10 @@ export type Database = {
           id?: string;
           session_id: string;
           field_key: string;
-          value?: string | null;
+          value?: Json | null;
           status?: string;
           confidence?: number | null;
-          source?: string | null;
+          source?: string;
           evidence?: string | null;
           confirmed_at?: string | null;
           created_at?: string;
@@ -95,10 +95,10 @@ export type Database = {
           id?: string;
           session_id?: string;
           field_key?: string;
-          value?: string | null;
+          value?: Json | null;
           status?: string;
           confidence?: number | null;
-          source?: string | null;
+          source?: string;
           evidence?: string | null;
           confirmed_at?: string | null;
           created_at?: string;
@@ -112,6 +112,7 @@ export type Database = {
           session_id: string;
           event_type: string;
           payload: Json;
+          idempotency_key: string | null;
           created_at: string;
         };
         Insert: {
@@ -119,6 +120,7 @@ export type Database = {
           session_id: string;
           event_type: string;
           payload?: Json;
+          idempotency_key?: string | null;
           created_at?: string;
         };
         Update: {
@@ -126,11 +128,77 @@ export type Database = {
           session_id?: string;
           event_type?: string;
           payload?: Json;
+          idempotency_key?: string | null;
           created_at?: string;
         };
         Relationships: [];
       };
-      // Present in existing demo code; keep permissive until regenerated.
+      captured_future_slots: {
+        Row: {
+          id: string;
+          session_id: string;
+          field_key: string;
+          value: Json;
+          confidence: number | null;
+          evidence: string | null;
+          confirmed: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          field_key: string;
+          value: Json;
+          confidence?: number | null;
+          evidence?: string | null;
+          confirmed?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          field_key?: string;
+          value?: Json;
+          confidence?: number | null;
+          evidence?: string | null;
+          confirmed?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      final_reconciliations: {
+        Row: {
+          id: string;
+          session_id: string;
+          source: string;
+          live_state: Json;
+          structured_output: Json;
+          differences: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          source: string;
+          live_state?: Json;
+          structured_output?: Json;
+          differences?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          source?: string;
+          live_state?: Json;
+          structured_output?: Json;
+          differences?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       todos: {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;

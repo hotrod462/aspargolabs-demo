@@ -30,15 +30,24 @@ export const TERMINAL_STATES = [
 export type TerminalState = (typeof TERMINAL_STATES)[number];
 export type AnyState = IntakeState | TerminalState;
 
-export type InterruptType =
-  | "clarification"
-  | "privacy_question"
-  | "no_medical_advice"
-  | "repeat_question"
-  | "audio_unclear"
+export type CallStatus =
+  | "in_progress"
+  | "completed"
+  | "hard_stop"
+  | "ineligible"
   | "emergency"
   | "proxy_caller"
-  | "human_escalation";
+  | "needs_review"
+  | "abandoned";
+
+export type FieldStatus =
+  | "pending"
+  | "asked"
+  | "captured"
+  | "confirmed"
+  | "unclear"
+  | "skipped"
+  | "error";
 
 export const FIELD_KEYS = [
   "age_confirmed",

@@ -1,0 +1,34 @@
+{
+  "type": "function",
+  "async": false,
+  "server": {
+    "url": "https://YOUR_VERCEL_DOMAIN.vercel.app/api/vapi-tools",
+    "headers": {
+      "x-vapi-secret": "YOUR_SHARED_SECRET"
+    }
+  },
+  "function": {
+    "name": "process_intake_turn",
+    "description": "Send the latest caller response to the backend intake control plane. The backend returns the exact next instruction for the assistant to say and whether the call should end.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "transcript": {
+          "type": "string",
+          "description": "The latest final user utterance or concise transcript of what the caller just said."
+        }
+      },
+      "required": ["transcript"]
+    }
+  },
+  "messages": [
+    {
+      "type": "request-failed",
+      "content": "I'm having trouble updating the intake right now."
+    },
+    {
+      "type": "request-response-delayed",
+      "content": "Sorry, this is taking a few more seconds."
+    }
+  ]
+}

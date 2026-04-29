@@ -1,12 +1,14 @@
 import { supabaseAdmin } from "@/utils/supabase/admin";
+import type { Json } from "@/types/database.types";
 import type {
   CallSession,
-  CallSessionSummary,
   CreateSessionInput,
+  FutureSlotInput,
   IntakeEvent,
   IntakeField,
   IntakeFieldUpdate,
   IntakeStore,
+  ReconciliationInput,
   StateUpdate,
 } from "./intake-store";
 
@@ -14,11 +16,15 @@ export class SupabaseIntakeStore implements IntakeStore {
   async createSession(input: CreateSessionInput): Promise<CallSession> {
     const { data, error } = await supabaseAdmin
       .from("call_sessions")
-      .insert({
-        call_id: input.call_id,
-        assistant_id: input.assistant_id ?? null,
-        patient_phone: input.patient_phone ?? null,
-      })
+      .upsert(
+        {
+          call_id: input.call_id,
+          assistant_id: input.assistant_id ?? null,
+          patient_phone: input.patient_phone ?? null,
+          metadata: (input.metadata ?? {}) as Json,
+        },
+        { onConflict: "call_id" },
+      )
       .select("*")
       .single();
 
@@ -37,59 +43,107 @@ export class SupabaseIntakeStore implements IntakeStore {
     return (data as unknown as CallSession) ?? null;
   }
 
+  async getSessionById(sessionId: string): Promise<CallSession | null> {
+    const { data, error } = await supabaseAdmin
+      .from("call_sessions")
+      .select("*")
+      .eq("id", sessionId)
+      .maybeSingle();
+
+    if (error) throw new Error(`getSessionById failed: ${error.message}`);
+    return (data as unknown as CallSession) ?? null;
+  }
+
   async saveEvent(event: IntakeEvent): Promise<void> {
-    const { error } = await supabaseAdmin
-      .from("intake_events")
-      // Database types expect `payload` to be `Json`, while IntakeEvent uses a more convenient object shape.
-      // Cast here; callers should keep `payload` JSON-serializable.
-      .insert(event as unknown as never);
+    const row = {
+      session_id: event.session_id,
+      event_type: event.event_type,
+      payload: event.payload,
+      idempotency_key: event.idempotency_key ?? null,
+    };
+
+    if (event.idempotency_key) {
+      const { data: existing } = await supabaseAdmin
+        .from("intake_events")
+        .select("id")
+        .eq("session_id", event.session_id)
+        .eq("idempotency_key", event.idempotency_key)
+        .maybeSingle();
+      if (existing) return;
+    }
+
+    const { error } = await supabaseAdmin.from("intake_events").insert(row as never);
     if (error) throw new Error(`saveEvent failed: ${error.message}`);
   }
 
   async updateField(sessionId: string, field: IntakeFieldUpdate): Promise<void> {
-    const { error } = await supabaseAdmin
-      .from("intake_fields")
-      .upsert(
-        {
-          session_id: sessionId,
-          field_key: field.field_key,
-          value: field.value,
-          status: field.status,
-          confidence: field.confidence ?? null,
-          evidence: field.evidence ?? null,
-          confirmed_at: field.status === "confirmed" ? new Date().toISOString() : null,
-        },
-        { onConflict: "session_id,field_key" },
-      );
+    const { error } = await supabaseAdmin.from("intake_fields").upsert(
+      {
+        session_id: sessionId,
+        field_key: field.field_key,
+        value: field.value,
+        status: field.status,
+        confidence: field.confidence ?? null,
+        source: field.source ?? "voice",
+        evidence: field.evidence ?? null,
+        confirmed_at: field.status === "confirmed" ? new Date().toISOString() : null,
+      } as never,
+      { onConflict: "session_id,field_key" },
+    );
 
     if (error) throw new Error(`updateField failed: ${error.message}`);
   }
 
   async updateState(sessionId: string, next: StateUpdate): Promise<void> {
-    const { error } = await supabaseAdmin
-      .from("call_sessions")
-      .update({
-        current_state: next.current_state,
-        ...(next.status && { status: next.status }),
-        ...(next.completion_pct !== undefined && { completion_pct: next.completion_pct }),
-        ...(next.hard_stop_reason && { hard_stop_reason: next.hard_stop_reason }),
-        ...(next.needs_review !== undefined && { needs_review: next.needs_review }),
-        ...(next.ended_at && { ended_at: next.ended_at }),
-      })
-      .eq("id", sessionId);
+    const patch: Record<string, unknown> = {
+      current_state: next.current_state,
+    };
+    if (next.status !== undefined) patch.status = next.status;
+    if (next.completion_pct !== undefined) patch.completion_pct = next.completion_pct;
+    if (next.hard_stop_reason !== undefined) patch.hard_stop_reason = next.hard_stop_reason;
+    if (next.needs_review !== undefined) patch.needs_review = next.needs_review;
+    if (next.ended_at !== undefined) patch.ended_at = next.ended_at;
+
+    const { error } = await supabaseAdmin.from("call_sessions").update(patch as never).eq("id", sessionId);
 
     if (error) throw new Error(`updateState failed: ${error.message}`);
   }
 
-  async listRecentSessions(limit = 50): Promise<CallSessionSummary[]> {
+  async upsertFutureSlot(input: FutureSlotInput): Promise<void> {
+    const { error } = await supabaseAdmin.from("captured_future_slots").upsert(
+      {
+        session_id: input.session_id,
+        field_key: input.field_key,
+        value: input.value,
+        confidence: input.confidence ?? null,
+        evidence: input.evidence ?? null,
+      } as never,
+      { onConflict: "session_id,field_key" },
+    );
+
+    if (error) throw new Error(`upsertFutureSlot failed: ${error.message}`);
+  }
+
+  async saveReconciliation(input: ReconciliationInput): Promise<void> {
+    const { error } = await supabaseAdmin.from("final_reconciliations").insert({
+      session_id: input.session_id,
+      source: input.source,
+      live_state: input.live_state,
+      structured_output: input.structured_output,
+      differences: input.differences,
+    } as never);
+    if (error) throw new Error(`saveReconciliation failed: ${error.message}`);
+  }
+
+  async listRecentSessions(limit = 50): Promise<CallSession[]> {
     const { data, error } = await supabaseAdmin
       .from("call_sessions")
-      .select("id, call_id, status, current_state, patient_phone, started_at, completion_pct, needs_review")
+      .select("*")
       .order("started_at", { ascending: false })
       .limit(limit);
 
     if (error) throw new Error(`listRecentSessions failed: ${error.message}`);
-    return (data ?? []) as unknown as CallSessionSummary[];
+    return (data ?? []) as unknown as CallSession[];
   }
 
   async getFieldsForSession(sessionId: string): Promise<IntakeField[]> {

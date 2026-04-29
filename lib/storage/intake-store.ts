@@ -1,14 +1,4 @@
-export type CallStatus =
-  | "in_progress"
-  | "completed"
-  | "hard_stop"
-  | "ineligible"
-  | "emergency"
-  | "proxy_caller"
-  | "needs_review"
-  | "abandoned";
-
-export type FieldStatus = "pending" | "captured" | "confirmed" | "skipped" | "error";
+import type { CallStatus, FieldKey, FieldStatus } from "@/lib/intake/schema";
 
 export interface CallSession {
   id: string;
@@ -28,8 +18,8 @@ export interface CallSession {
 export interface IntakeField {
   id: string;
   session_id: string;
-  field_key: string;
-  value: string | null;
+  field_key: FieldKey;
+  value: unknown;
   status: FieldStatus;
   confidence: number | null;
   source: string;
@@ -38,52 +28,65 @@ export interface IntakeField {
 }
 
 export interface IntakeEvent {
+  id?: string;
   session_id: string;
   event_type: string;
   payload: Record<string, unknown>;
+  idempotency_key?: string | null;
+  created_at?: string;
 }
 
 export interface CreateSessionInput {
   call_id: string;
-  assistant_id?: string;
-  patient_phone?: string;
+  assistant_id?: string | null;
+  patient_phone?: string | null;
+  metadata?: Record<string, unknown>;
 }
 
 export interface IntakeFieldUpdate {
-  field_key: string;
-  value: string;
+  field_key: FieldKey;
+  value: unknown;
   status: FieldStatus;
-  confidence?: number;
-  evidence?: string;
+  confidence?: number | null;
+  evidence?: string | null;
+  source?: string;
 }
 
 export interface StateUpdate {
   current_state: string;
   status?: CallStatus;
   completion_pct?: number;
-  hard_stop_reason?: string;
+  hard_stop_reason?: string | null;
   needs_review?: boolean;
-  ended_at?: string;
+  ended_at?: string | null;
 }
 
-export interface CallSessionSummary {
-  id: string;
-  call_id: string;
-  status: CallStatus;
-  current_state: string;
-  patient_phone: string | null;
-  started_at: string;
-  completion_pct: number;
-  needs_review: boolean;
+export interface FutureSlotInput {
+  session_id: string;
+  field_key: FieldKey;
+  value: unknown;
+  confidence?: number | null;
+  evidence?: string | null;
+}
+
+export interface ReconciliationInput {
+  session_id: string;
+  source: string;
+  live_state: Record<string, unknown>;
+  structured_output: Record<string, unknown>;
+  differences: unknown[];
 }
 
 export interface IntakeStore {
   createSession(input: CreateSessionInput): Promise<CallSession>;
   getSession(callId: string): Promise<CallSession | null>;
+  getSessionById(sessionId: string): Promise<CallSession | null>;
   saveEvent(event: IntakeEvent): Promise<void>;
   updateField(sessionId: string, field: IntakeFieldUpdate): Promise<void>;
   updateState(sessionId: string, next: StateUpdate): Promise<void>;
-  listRecentSessions(limit?: number): Promise<CallSessionSummary[]>;
+  upsertFutureSlot(input: FutureSlotInput): Promise<void>;
+  saveReconciliation(input: ReconciliationInput): Promise<void>;
+  listRecentSessions(limit?: number): Promise<CallSession[]>;
   getFieldsForSession(sessionId: string): Promise<IntakeField[]>;
   getEventsForSession(sessionId: string): Promise<IntakeEvent[]>;
 }

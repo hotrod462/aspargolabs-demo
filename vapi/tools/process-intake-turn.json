@@ -10,20 +10,11 @@
     }
   },
   "id": "a7c1f2fc-d4ed-4d79-84e0-595e2aed20cd",
-  "messages": [
-    {
-      "content": "I'm having trouble updating the intake right now.",
-      "type": "request-failed"
-    },
-    {
-      "content": "Sorry, this is taking a few more seconds.",
-      "type": "request-response-delayed"
-    }
-  ],
+  "messages": [],
   "orgId": "6ab163d1-11bf-478f-834e-9a079a8df0e0",
   "server": {
     "url": "https://nonprovincial-unsmoking-winifred.ngrok-free.dev/api/vapi-tools"
   },
   "type": "function",
-  "updatedAt": "2026-04-29T08:23:17.644Z"
+  "updatedAt": "2026-04-29T08:55:06.404Z"
 }

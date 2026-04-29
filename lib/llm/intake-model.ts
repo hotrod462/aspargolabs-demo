@@ -23,6 +23,11 @@ export const intakeModel =
 export const INTAKE_LLM_MODEL_ID =
   backend === "google" ? GEMINI_INTAKE_MODEL_ID : GROQ_INTAKE_MODEL_ID;
 
+console.log("[intake-llm] backend.selected", {
+  backend: INTAKE_LLM_BACKEND,
+  model: INTAKE_LLM_MODEL_ID,
+});
+
 /** Provider knobs for structured JSON extraction alongside `Output.object`. */
 export function intakeGenerateTextProviderOptions():
   | { groq: { structuredOutputs: true; strictJsonSchema: boolean } }

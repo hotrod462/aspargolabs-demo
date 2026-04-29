@@ -7,16 +7,12 @@
       "enabled": false
     }
   },
-  "artifactPlan": {
-    "structuredOutputIds": [
-      "e8f18f8c-3938-4b2d-b53a-f4aaf54431ed"
-    ]
-  },
   "backgroundDenoisingEnabled": true,
-  "createdAt": "2026-04-26T09:44:37.457Z",
+  "createdAt": "2026-04-29T12:53:05.050Z",
   "endCallFunctionEnabled": true,
+  "endCallMessage": "Goodbye.",
   "firstMessage": "Hi, welcome to aspaargo. I'm Alex, an AI designed to collect your health information so our doctors can see if hezz-queue, our sil-den-a-fil spray, is right for you. This will just take about two minutes. Are you ready to get started?",
-  "id": "8c49bf5d-0db9-47b5-ac85-c300b85b60f2",
+  "id": "b9579883-227e-4bdc-a7df-9d92e58fb292",
   "isServerUrlSecretSet": false,
   "model": {
     "messages": [
@@ -27,11 +23,11 @@
     ],
     "model": "custom-intake-llm",
     "provider": "custom-llm",
-    "url": "https://aspargolabs-demo.vercel.app/api/openai/chat/completions",
-    "temperature": 0
+    "temperature": 0,
+    "url": "https://amniotic-backlog-yo-yo.ngrok-free.dev/api/openai/chat/completions"
   },
-  "name": "Alex-AspargoTest",
-  "orgId": "17f06beb-42f7-4b61-9354-1fce154c5643",
+  "name": "Alex",
+  "orgId": "963b3696-8d40-48e4-98c4-a9268e935b6c",
   "startSpeakingPlan": {
     "waitSeconds": 0.7
   },
@@ -49,8 +45,6 @@
     "voiceSeconds": 0.5
   },
   "transcriber": {
-    "eotThreshold": 0.65,
-    "eotTimeoutMs": 10000,
     "fallbackPlan": {
       "autoFallback": {
         "enabled": true
@@ -60,7 +54,7 @@
     "model": "flux-general-en",
     "provider": "deepgram"
   },
-  "updatedAt": "2026-04-26T10:03:43.872Z",
+  "updatedAt": "2026-04-29T13:02:03.691Z",
   "voice": {
     "provider": "vapi",
     "speed": 0.9,

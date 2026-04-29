@@ -20,6 +20,13 @@ export interface ProcessTurnResult {
   status: CallStatus;
 }
 
+const ORCHESTRATOR_LOG_MAX_CHARS = 400;
+
+function clip(value: string, max = ORCHESTRATOR_LOG_MAX_CHARS): string {
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}… [truncated ${value.length - max} chars]`;
+}
+
 function terminalStatus(state: AnyState): CallStatus {
   if (state === "completed") return "completed";
   if (state === "hard_stop_end") return "hard_stop";
@@ -78,6 +85,15 @@ export async function processIntakeTurn(
   store: IntakeStore,
   input: ProcessTurnInput,
 ): Promise<ProcessTurnResult> {
+  const turnStartedAt = Date.now();
+  console.log("[intake-orchestrator] turn.start", {
+    callId: input.callId,
+    toolCallId: input.toolCallId ?? null,
+    transcriptChars: input.transcript.length,
+    transcriptPreview: clip(input.transcript || "(empty)"),
+    llmModel: INTAKE_LLM_MODEL_ID,
+  });
+
   const session =
     (await store.getSession(input.callId)) ??
     (await store.createSession({
@@ -87,6 +103,13 @@ export async function processIntakeTurn(
     }));
 
   if (!isActiveIntakeState(session.current_state)) {
+    console.log("[intake-orchestrator] turn.already_ended", {
+      callId: input.callId,
+      sessionId: session.id,
+      state: session.current_state,
+      status: session.status,
+      elapsedMs: Date.now() - turnStartedAt,
+    });
     return withAssistantLogged(store, session.id, input, {
       say: "This intake has already ended. Thank you for calling.",
       end_call: true,
@@ -121,6 +144,16 @@ export async function processIntakeTurn(
     });
     extraction = result.extraction;
     llmLatencyMs = result.llmLatencyMs;
+    console.log("[intake-orchestrator] turn.extracted", {
+      callId: input.callId,
+      sessionId: session.id,
+      currentState,
+      answer: extraction.answer,
+      interrupt: extraction.interrupt,
+      confidence: extraction.confidence,
+      llmLatencyMs,
+      evidencePreview: clip(extraction.evidence || "(none)"),
+    });
   } catch (error) {
     const elapsedToFailMs = Math.round(performance.now() - extractStarted);
     await store.saveEvent({
@@ -134,6 +167,14 @@ export async function processIntakeTurn(
         intake_llm_model: INTAKE_LLM_MODEL_ID,
       }),
       idempotency_key: input.toolCallId ? `tool:${input.toolCallId}:extraction_error` : null,
+    });
+    console.error("[intake-orchestrator] turn.extraction_failed", {
+      callId: input.callId,
+      sessionId: session.id,
+      currentState,
+      llmModel: INTAKE_LLM_MODEL_ID,
+      elapsedToFailMs,
+      error,
     });
     throw error;
   }
@@ -326,19 +367,39 @@ export async function processIntakeTurn(
           (nextState === "completed"
             ? "Thank you, that is all the medical information I need. I am sending your file to our licensed doctor for review."
             : "I cannot proceed with this intake. I am going to end the call now.");
-    return withAssistantLogged(store, session.id, input, {
+    const terminalResult = {
       say,
       end_call: true,
       state: nextState,
       status,
+    } as const;
+    console.log("[intake-orchestrator] turn.terminal", {
+      callId: input.callId,
+      sessionId: session.id,
+      nextState,
+      status,
+      end_call: true,
+      sayPreview: clip(say),
+      elapsedMs: Date.now() - turnStartedAt,
     });
+    return withAssistantLogged(store, session.id, input, terminalResult);
   }
 
   const nextConfig = FSM_CONFIG[nextState as IntakeState];
-  return withAssistantLogged(store, session.id, input, {
+  const inProgressResult = {
     say: nextConfig.question,
     end_call: false,
     state: nextState,
     status,
+  } as const;
+  console.log("[intake-orchestrator] turn.next_question", {
+    callId: input.callId,
+    sessionId: session.id,
+    previousState: currentState,
+    nextState,
+    status,
+    sayPreview: clip(nextConfig.question),
+    elapsedMs: Date.now() - turnStartedAt,
   });
+  return withAssistantLogged(store, session.id, input, inProgressResult);
 }

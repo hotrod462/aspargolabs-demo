@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "vapi:export": "dotenv -e .env.local -e .env -- node scripts/vapi-export-assistants.mjs",
+    "vapi:setup-intake": "dotenv -e .env.local -e .env -- node scripts/vapi-setup-intake-resources.mjs",
     "vapi:sync": "dotenv -e .env.local -e .env -- node scripts/vapi-sync-assistants.mjs",
     "vapi:sync-tools": "dotenv -e .env.local -e .env -- node scripts/vapi-sync-tools.mjs",
     "db:gen-types": "dotenv -e .env.local -e .env -- sh -c \"npx supabase gen types typescript --project-id \\\"$SUPABASE_PROJECT_ID\\\" > types/database.types.ts\"",

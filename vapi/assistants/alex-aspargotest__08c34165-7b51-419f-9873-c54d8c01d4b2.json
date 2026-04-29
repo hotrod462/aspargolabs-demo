@@ -9,14 +9,14 @@
   },
   "artifactPlan": {
     "structuredOutputIds": [
-      "8fd95c09-df2f-4ed9-8cca-9b341db88bb3"
+      "e8f18f8c-3938-4b2d-b53a-f4aaf54431ed"
     ]
   },
   "backgroundDenoisingEnabled": true,
   "createdAt": "2026-04-26T09:44:37.457Z",
   "endCallFunctionEnabled": true,
   "firstMessage": "Hi, welcome to aspaargo. I'm Alex, an AI designed to collect your health information so our doctors can see if hezz-queue, our sil-den-a-fil spray, is right for you. This will just take about two minutes. Are you ready to get started?",
-  "id": "08c34165-7b51-419f-9873-c54d8c01d4b2",
+  "id": "8c49bf5d-0db9-47b5-ac85-c300b85b60f2",
   "isServerUrlSecretSet": false,
   "model": {
     "messages": [
@@ -29,11 +29,11 @@
     "provider": "openai",
     "temperature": 0.2,
     "toolIds": [
-      "a7c1f2fc-d4ed-4d79-84e0-595e2aed20cd"
+      "8ea4ef3c-ec02-46c4-b590-221348daf105"
     ]
   },
   "name": "Alex-AspargoTest",
-  "orgId": "6ab163d1-11bf-478f-834e-9a079a8df0e0",
+  "orgId": "17f06beb-42f7-4b61-9354-1fce154c5643",
   "startSpeakingPlan": {
     "waitSeconds": 0.7
   },

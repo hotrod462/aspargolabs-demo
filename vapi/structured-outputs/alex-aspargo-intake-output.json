@@ -1,0 +1,73 @@
+{
+  "assistantIds": [
+    "8c49bf5d-0db9-47b5-ac85-c300b85b60f2"
+  ],
+  "createdAt": "2026-04-29T13:01:54.587Z",
+  "description": "Extracts final normalized patient intake fields from Alex Aspargo voice calls for reconciliation in Supabase.",
+  "id": "e8f18f8c-3938-4b2d-b53a-f4aaf54431ed",
+  "name": "Alex Aspargo Intake Output",
+  "orgId": "17f06beb-42f7-4b61-9354-1fce154c5643",
+  "schema": {
+    "description": "Final normalized Aspargo clinical intake answers extracted from the completed call.",
+    "properties": {
+      "allergies": {
+        "description": "All allergies or medication allergies mentioned by the patient. Use an empty array if none were reported.",
+        "items": {
+          "description": "Short one-line description of the allergy.",
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "blood_conditions": {
+        "description": "Whether the patient reports a blood condition such as sickle cell anemia, multiple myeloma, or leukemia.",
+        "type": "boolean"
+      },
+      "chest_pain_or_shortness_of_breath": {
+        "description": "Whether the patient experiences chest pain or severe shortness of breath with light exercise.",
+        "type": "boolean"
+      },
+      "ed_symptoms": {
+        "description": "Whether the patient reports difficulty getting or maintaining an erection.",
+        "type": "boolean"
+      },
+      "high_bp_or_alpha_blockers": {
+        "description": "Whether the patient has uncontrolled high blood pressure or takes alpha-blocker medications.",
+        "type": "boolean"
+      },
+      "other_medications": {
+        "description": "Prescription medications, supplements, or other daily medications mentioned by the patient. Use an empty array if none were reported.",
+        "items": {
+          "description": "Short one-line description of the medication or supplement.",
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "penile_conditions": {
+        "description": "Whether the patient reports priapism history or penile shape conditions such as Peyronie disease.",
+        "type": "boolean"
+      },
+      "recent_cardio_event": {
+        "description": "Whether the patient had a heart attack, stroke, or heart surgery in the past six months.",
+        "type": "boolean"
+      },
+      "recent_normal_bp": {
+        "description": "Whether the patient had blood pressure checked in the last six months and it was in a normal range.",
+        "type": "boolean"
+      },
+      "severe_conditions": {
+        "description": "Whether the patient reports severe liver disease, kidney disease, bleeding disorder, active stomach ulcers, or NAION.",
+        "type": "boolean"
+      },
+      "uses_nitrates_or_poppers": {
+        "description": "Whether the patient currently takes nitrates or uses recreational poppers.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "ed_symptoms"
+    ],
+    "type": "object"
+  },
+  "type": "ai",
+  "updatedAt": "2026-04-29T13:09:54.929Z"
+}

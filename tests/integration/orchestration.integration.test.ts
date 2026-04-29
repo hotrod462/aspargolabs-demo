@@ -13,7 +13,8 @@ import { ORCHESTRATION_SCENARIOS, type ScenarioDefinition } from "./scenarios";
  * Vitest prints each `it` title — that is the scenario name. `call_id` prefix in Supabase: `itest-<scenarioId>-*`.
  *
  * `npm run test:integration`
- * `INTEGRATION_N=3 npm run test:integration` (repeats scenarios with `repeatIntegrationRuns: true`)
+ * `INTEGRATION_VERBOSE=1 npm run test:integration` logs each turn (state before/after).
+ * If you do not see `[itest]` lines, run with `--reporter=verbose` (default reporter may omit stdout).
  */
 const RUN = integrationEnvReady();
 if (!RUN) {

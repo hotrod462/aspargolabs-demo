@@ -79,4 +79,27 @@ export const ORCHESTRATION_SCENARIOS: ScenarioDefinition[] = [
       lastTurn: { end_call: false, state: "nitrates_poppers" },
     },
   },
+  {
+    scenarioId: "multi-age-ed-nitrates-no",
+    title: "Multi-turn: age yes → ED yes → nitrates no → recent_ed_medications",
+    description:
+      "Three scripted turns: advance through chief_complaint and answer \"no\" at nitrates_poppers; expect recent_ed_medications.",
+    steps: [
+      { transcript: "Yes, I'm over 18 and I'm calling for myself today.", label: "age_gate" },
+      {
+        transcript: "Yes, I have difficulty getting and maintaining an erection.",
+        label: "chief_complaint_ed",
+      },
+      {
+        transcript: "No, I do not take nitrates or recreational drugs known as poppers.",
+        label: "nitrates_poppers_no",
+      },
+    ],
+    expect: {
+      finalState: "recent_ed_medications",
+      finalStatus: "in_progress",
+      lastTurn: { end_call: false, state: "recent_ed_medications" },
+    },
+    repeatIntegrationRuns: true,
+  },
 ];

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { inspect } from "node:util";
 
 import { processIntakeTurn } from "@/lib/intake/orchestrator";
 import type { ProcessTurnResult } from "@/lib/intake/orchestrator";
@@ -39,9 +40,20 @@ export interface RunOrchestrationScenarioOptions {
   steps: OrchestrationStep[];
 }
 
+function integrationVerbose(): boolean {
+  return process.env.INTEGRATION_VERBOSE === "1";
+}
+
 /**
  * Runs each transcript in order against the same `callId` (session advances).
  * Returns the last turn result and the final session row from the store.
+ *
+ * On errors, prints `[itest] FAIL …` with turn index (1-based), label, `stateBefore`, transcript
+ * preview, message, optional `cause`, and deep `inspect(err)` (schema/Groq failures may nest under
+ * `cause`).
+ *
+ * Per-turn `[itest] … start/ok` lines need `INTEGRATION_VERBOSE=1`; use `vitest --reporter=verbose`
+ * if stdout does not appear (default reporter may omit it).
  */
 export async function runOrchestrationScenario(
   options: RunOrchestrationScenarioOptions,
@@ -55,14 +67,51 @@ export async function runOrchestrationScenario(
   const callId = `itest-${options.scenarioId}-${suffix}`;
 
   const turnResults: ProcessTurnResult[] = [];
-  for (let i = 0; i < options.steps.length; i++) {
-    const { transcript } = options.steps[i];
-    const result = await processIntakeTurn(intakeStore, {
-      callId,
-      transcript,
-      toolCallId: `itest-step-${i}-${randomUUID()}`,
-    });
-    turnResults.push(result);
+  const stepCount = options.steps.length;
+
+  for (let i = 0; i < stepCount; i++) {
+    const step = options.steps[i];
+    const { transcript } = step;
+    const label = step.label ?? `step_${i}`;
+    const sessionBefore = await intakeStore.getSession(callId);
+
+    if (integrationVerbose()) {
+      console.log(
+        `[itest] ${options.scenarioId} turn ${i + 1}/${stepCount} start label=${label} stateBefore=${sessionBefore?.current_state ?? "(new call → age_gate implicit)"}`,
+      );
+    }
+
+    try {
+      const result = await processIntakeTurn(intakeStore, {
+        callId,
+        transcript,
+        toolCallId: `itest-step-${i}-${randomUUID()}`,
+      });
+      turnResults.push(result);
+      if (integrationVerbose()) {
+        console.log(
+          `[itest] ${options.scenarioId} turn ${i + 1}/${stepCount} ok label=${label} stateAfter=${result.state} status=${result.status} end_call=${result.end_call}`,
+        );
+      }
+    } catch (err) {
+      const preview = transcript.length > 160 ? `${transcript.slice(0, 160)}…` : transcript;
+      console.error(
+        `[itest] FAIL ${options.scenarioId} turn ${i + 1}/${stepCount} (1-based index: ${i + 1})`,
+      );
+      console.error(
+        `[itest]   label=${label} stateBefore=${sessionBefore?.current_state ?? "(no session yet)"} toolCallId_prefix=itest-step-${i}-<uuid>`,
+      );
+      console.error(`[itest]   transcript preview: ${preview}`);
+      console.error("[itest]   error (message):", err instanceof Error ? err.message : String(err));
+      if (err instanceof Error && err.cause != null) {
+        console.error("[itest]   error.cause:", inspect(err.cause, { depth: 8, colors: false }));
+      }
+      console.error(
+        "[itest]   error (full inspect):",
+        inspect(err, { depth: 10, colors: false, maxArrayLength: 30 }),
+      );
+      throw err;
+    }
   }
 
   const session = await intakeStore.getSession(callId);

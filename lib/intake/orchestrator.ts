@@ -1,6 +1,6 @@
 import { extractIntakeTurn } from "./extractor";
 import { completionPct, FSM_CONFIG, type TransitionKey } from "./fsm";
-import type { AnyState, CallStatus, IntakeState } from "./schema";
+import { INTAKE_STATES, type AnyState, CallStatus, IntakeState } from "./schema";
 import type { IntakeStore } from "@/lib/storage/intake-store";
 
 export interface ProcessTurnInput {
@@ -35,6 +35,10 @@ function transitionKeyFromAnswer(answer: string): TransitionKey {
   return "answered";
 }
 
+function isActiveIntakeState(state: string): state is IntakeState {
+  return (INTAKE_STATES as readonly string[]).includes(state);
+}
+
 export async function processIntakeTurn(
   store: IntakeStore,
   input: ProcessTurnInput,
@@ -47,7 +51,16 @@ export async function processIntakeTurn(
       patient_phone: input.patientPhone,
     }));
 
-  const currentState = session.current_state as IntakeState;
+  if (!isActiveIntakeState(session.current_state)) {
+    return {
+      say: "This intake has already ended. Thank you for calling.",
+      end_call: true,
+      state: session.current_state as AnyState,
+      status: session.status,
+    };
+  }
+
+  const currentState = session.current_state;
   const stateConfig = FSM_CONFIG[currentState];
 
   await store.saveEvent({
@@ -117,6 +130,58 @@ export async function processIntakeTurn(
   if (extraction.interrupt === "medical_advice") {
     return {
       say: `I cannot give medical advice, but I will make sure the doctor sees that in your file. ${stateConfig.question}`,
+      end_call: false,
+      state: currentState,
+      status: session.status,
+    };
+  }
+
+  if (extraction.interrupt === "human_escalation") {
+    const say =
+      "I've noted that you'd like to speak with someone. A member of our team will follow up with you. I'll end the call now.";
+    await store.updateState(session.id, {
+      current_state: "needs_review",
+      status: "needs_review",
+      completion_pct: completionPct("needs_review"),
+      ended_at: new Date().toISOString(),
+      hard_stop_reason: "human_escalation",
+      needs_review: true,
+    });
+    return { say, end_call: true, state: "needs_review", status: "needs_review" };
+  }
+
+  if (extraction.interrupt === "clarification") {
+    return {
+      say:
+        extraction.suggestedSay ??
+        `Sorry for the confusion. ${stateConfig.question}`,
+      end_call: false,
+      state: currentState,
+      status: session.status,
+    };
+  }
+
+  if (extraction.interrupt === "repeat_question") {
+    return {
+      say: extraction.suggestedSay ?? stateConfig.question,
+      end_call: false,
+      state: currentState,
+      status: session.status,
+    };
+  }
+
+  if (extraction.interrupt === "audio_unclear") {
+    await store.updateField(session.id, {
+      field_key: stateConfig.fieldKey,
+      value: null,
+      status: "unclear",
+      confidence: extraction.confidence,
+      evidence: extraction.evidence || input.transcript,
+    });
+    return {
+      say:
+        extraction.suggestedSay ??
+        `I didn't quite catch that. Could you say that again? ${stateConfig.question}`,
       end_call: false,
       state: currentState,
       status: session.status,

@@ -87,6 +87,7 @@ export interface IntakeStore {
   upsertFutureSlot(input: FutureSlotInput): Promise<void>;
   saveReconciliation(input: ReconciliationInput): Promise<void>;
   listRecentSessions(limit?: number): Promise<CallSession[]>;
+  getFieldsBySessionIds(sessionIds: string[]): Promise<Record<string, IntakeField[]>>;
   getFieldsForSession(sessionId: string): Promise<IntakeField[]>;
   getEventsForSession(sessionId: string): Promise<IntakeEvent[]>;
   /** Cumulative extraction LLM metrics on `call_sessions.metadata` for monitors / analytics. */

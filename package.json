@@ -16,6 +16,7 @@
     "db:reset": "dotenv -e .env.local -e .env -- npx supabase db reset"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.65",
     "@ai-sdk/groq": "^3.0.35",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.105.0",

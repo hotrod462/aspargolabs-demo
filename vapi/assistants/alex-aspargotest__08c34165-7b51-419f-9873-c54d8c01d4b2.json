@@ -25,8 +25,8 @@
         "role": "system"
       }
     ],
-    "model": "openai/gpt-oss-120b",
-    "provider": "groq",
+    "model": "gpt-5.4-mini",
+    "provider": "openai",
     "temperature": 0.2,
     "toolIds": [
       "a7c1f2fc-d4ed-4d79-84e0-595e2aed20cd"

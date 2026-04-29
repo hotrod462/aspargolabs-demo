@@ -161,6 +161,28 @@ export class SupabaseIntakeStore implements IntakeStore {
     return (data ?? []) as unknown as CallSession[];
   }
 
+  async getFieldsBySessionIds(sessionIds: string[]): Promise<Record<string, IntakeField[]>> {
+    const empty: Record<string, IntakeField[]> = {};
+    for (const id of sessionIds) empty[id] = [];
+    if (sessionIds.length === 0) return empty;
+
+    const { data, error } = await supabaseAdmin
+      .from("intake_fields")
+      .select("*")
+      .in("session_id", sessionIds)
+      .order("created_at");
+
+    if (error) throw new Error(`getFieldsBySessionIds failed: ${error.message}`);
+
+    for (const row of data ?? []) {
+      const f = row as unknown as IntakeField;
+      const sid = f.session_id;
+      if (!empty[sid]) empty[sid] = [];
+      empty[sid].push(f);
+    }
+    return empty;
+  }
+
   async getFieldsForSession(sessionId: string): Promise<IntakeField[]> {
     const { data, error } = await supabaseAdmin
       .from("intake_fields")

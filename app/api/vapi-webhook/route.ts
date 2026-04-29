@@ -37,53 +37,6 @@ function extractStructuredData(message: VapiMessage | undefined) {
   };
 }
 
-function formatArray(arr: unknown) {
-  if (Array.isArray(arr) && arr.length > 0) return arr.join(", ");
-  if (typeof arr === "string" && arr.trim() !== "") return arr;
-  return "None";
-}
-
-async function pushToAirtable(structuredData: Record<string, unknown>) {
-  const baseId = process.env.AIRTABLE_BASE_ID;
-  const pat = process.env.AIRTABLE_PAT;
-  if (!baseId || !pat) return { ok: true as const, skipped: true };
-
-  const airtablePayload = {
-    records: [
-      {
-        fields: {
-          "ED Symptoms": Boolean(structuredData.ed_symptoms),
-          "Nitrates/Poppers": Boolean(structuredData.uses_nitrates_or_poppers),
-          "Recent Cardio Event": Boolean(structuredData.recent_cardio_event),
-          "Chest Pain/SOB": Boolean(structuredData.chest_pain_or_shortness_of_breath),
-          "High BP/Alpha Blockers": Boolean(structuredData.high_bp_or_alpha_blockers),
-          "Recent Normal BP": Boolean(structuredData.recent_normal_bp),
-          "Severe Conditions": Boolean(structuredData.severe_conditions),
-          "Penile Conditions": Boolean(structuredData.penile_conditions),
-          "Blood Conditions": Boolean(structuredData.blood_conditions),
-          Allergies: formatArray(structuredData.allergies),
-          "Other Medications": formatArray(structuredData.other_medications),
-        },
-      },
-    ],
-  };
-
-  const res = await fetch(`https://api.airtable.com/v0/${baseId}/Patient%20Intake`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${pat}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(airtablePayload),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    return { ok: false as const, error: text };
-  }
-  return { ok: true as const, skipped: false };
-}
-
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { message?: VapiMessage; type?: string };
@@ -121,23 +74,10 @@ export async function POST(req: Request) {
       differences: [],
     });
 
-    const airtable =
-      Object.keys(extracted.data).length > 0
-        ? await pushToAirtable(extracted.data)
-        : { ok: true as const, skipped: true };
-    if (!airtable.ok) {
-      console.error("[vapi-webhook] Airtable push failed:", airtable.error);
-      return NextResponse.json(
-        { success: false, event: eventName, error: "Airtable push failed" },
-        { status: 502 },
-      );
-    }
-
     return NextResponse.json({
       success: true,
       event: eventName,
       source: extracted.source,
-      airtable: airtable.skipped ? "skipped" : "ok",
     });
   } catch (error) {
     console.error("[vapi-webhook]", error);

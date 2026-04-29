@@ -23,24 +23,225 @@ type VapiTranscriptMessage = {
   transcript?: string;
   transcriptType?: string;
 };
+
+type EdFrequencyAnswer = "" | "almost_never" | "sometimes" | "often" | "almost_every_time";
+type RiskAnswer = "" | "yes" | "no";
+type ChestSymptomsAnswer = "" | "no" | "mild_on_exertion" | "frequent_or_severe";
+type HighBpAnswer = "" | "no" | "yes_controlled_or_alpha_blocker" | "yes_uncontrolled";
+type RecentNormalBpAnswer = "" | "normal" | "low" | "high";
+type OtherDetailsAnswer = "" | "yes" | "no";
+
 type IntakeFormData = {
-  edSymptoms: "yes" | "no";
-  usesNitratesOrPoppers: "yes" | "no";
-  recentCardioEvent: "yes" | "no";
-  chestPainOrShortnessOfBreath: "yes" | "no";
-  highBpOrAlphaBlockers: "yes" | "no";
-  recentNormalBp: "yes" | "no";
-  severeConditions: "yes" | "no";
-  penileConditions: "yes" | "no";
-  bloodConditions: "yes" | "no";
-  hasOtherAllergiesOrMedications: "yes" | "no";
-  allergies: string;
-  otherMedications: string;
+  edSymptoms: EdFrequencyAnswer;
+  usesNitratesOrPoppers: RiskAnswer;
+  recentCardioEvent: RiskAnswer;
+  chestPainOrShortnessOfBreath: ChestSymptomsAnswer;
+  highBpOrAlphaBlockers: HighBpAnswer;
+  recentNormalBp: RecentNormalBpAnswer;
+  severeConditions: RiskAnswer;
+  penileConditions: RiskAnswer;
+  bloodConditions: RiskAnswer;
+  hasOtherAllergiesOrMedications: OtherDetailsAnswer;
+  allergies: string[];
+  otherMedications: string[];
+};
+
+type QuestionKind = "binary" | "multi" | "multi_select";
+type FormQuestion = {
+  id: keyof IntakeFormData;
+  section: "Safety" | "Cardiovascular" | "Medical History" | "Allergies & Medications";
+  label: string;
+  helperText: string;
+  required: boolean;
+  kind: QuestionKind;
+  options?: Array<{ value: string; label: string }>;
+  showWhen?: (data: IntakeFormData) => boolean;
 };
 
 const CALL_OUT_NUMBER = "+14435589279";
 const CALL_OUT_LABEL = "+1 (443) 558-9279";
 const SHOW_LIVE_TRANSCRIPT = false;
+const INITIAL_FORM_DATA: IntakeFormData = {
+  edSymptoms: "",
+  usesNitratesOrPoppers: "",
+  recentCardioEvent: "",
+  chestPainOrShortnessOfBreath: "",
+  highBpOrAlphaBlockers: "",
+  recentNormalBp: "",
+  severeConditions: "",
+  penileConditions: "",
+  bloodConditions: "",
+  hasOtherAllergiesOrMedications: "",
+  allergies: [],
+  otherMedications: [],
+};
+
+const FORM_QUESTIONS: FormQuestion[] = [
+  {
+    id: "edSymptoms",
+    section: "Safety",
+    kind: "multi",
+    required: true,
+    label: "How often do you experience difficulty getting or maintaining an erection?",
+    helperText: "Select the option that best matches your recent experience.",
+    options: [
+      { value: "almost_never", label: "Almost never - it's occasional" },
+      { value: "sometimes", label: "Sometimes - it happens more than I'd like" },
+      { value: "often", label: "Often - it's becoming a real issue" },
+      { value: "almost_every_time", label: "Almost every time" },
+    ],
+  },
+  {
+    id: "usesNitratesOrPoppers",
+    section: "Safety",
+    kind: "binary",
+    required: true,
+    label:
+      "Are you currently taking nitrates (such as nitroglycerin for chest pain) or using recreational poppers?",
+    helperText: "Mixing nitrates with sildenafil can cause a dangerous blood pressure drop.",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" },
+    ],
+  },
+  {
+    id: "recentCardioEvent",
+    section: "Cardiovascular",
+    kind: "multi",
+    required: true,
+    label: "In the past 6 months, have you had a heart attack, stroke, or heart surgery?",
+    helperText: "Recent cardiovascular events require additional clinical review.",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" },
+    ],
+  },
+  {
+    id: "chestPainOrShortnessOfBreath",
+    section: "Cardiovascular",
+    kind: "multi",
+    required: true,
+    label:
+      "Do you get chest pain or severe shortness of breath with light activity (for example, climbing two flights of stairs)?",
+    helperText: "This checks for exertional symptoms that can impact treatment safety.",
+    options: [
+      { value: "no", label: "No symptoms with light activity" },
+      { value: "mild_on_exertion", label: "Mild symptoms only with exertion" },
+      { value: "frequent_or_severe", label: "Frequent or severe symptoms" },
+    ],
+  },
+  {
+    id: "highBpOrAlphaBlockers",
+    section: "Cardiovascular",
+    kind: "multi",
+    required: true,
+    label:
+      "Do you have uncontrolled high blood pressure, or do you take alpha-blockers such as Flomax (tamsulosin)?",
+    helperText: "Some blood pressure and prostate medications can interact with treatment.",
+    options: [
+      { value: "no", label: "No" },
+      { value: "yes_controlled_or_alpha_blocker", label: "Yes, controlled BP or on alpha-blocker" },
+      { value: "yes_uncontrolled", label: "Yes, uncontrolled high blood pressure" },
+    ],
+  },
+  {
+    id: "recentNormalBp",
+    section: "Cardiovascular",
+    kind: "multi",
+    required: true,
+    label: "What best describes your most recent blood pressure check?",
+    helperText: "Choose the option that best matches your latest BP reading status.",
+    options: [
+      { value: "normal", label: "Normal" },
+      { value: "low", label: "Low" },
+      { value: "high", label: "High" },
+    ],
+  },
+  {
+    id: "severeConditions",
+    section: "Medical History",
+    kind: "binary",
+    required: true,
+    label:
+      "Have you been diagnosed with severe liver or kidney disease, a bleeding disorder, active stomach ulcers, or NAION?",
+    helperText: "These conditions can change medication suitability and dosing decisions.",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" },
+    ],
+  },
+  {
+    id: "penileConditions",
+    section: "Medical History",
+    kind: "binary",
+    required: true,
+    label:
+      "Have you ever had an erection lasting over 4 hours, or a condition affecting penile shape such as Peyronie's disease?",
+    helperText: "This helps the clinician assess treatment risk.",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" },
+    ],
+  },
+  {
+    id: "bloodConditions",
+    section: "Medical History",
+    kind: "binary",
+    required: true,
+    label: "Do you have a blood condition such as sickle cell anemia, multiple myeloma, or leukemia?",
+    helperText: "These conditions may require a different treatment approach.",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" },
+    ],
+  },
+  {
+    id: "hasOtherAllergiesOrMedications",
+    section: "Allergies & Medications",
+    kind: "binary",
+    required: true,
+    label: "Do you have any allergies or daily medications/supplements we should add for doctor review?",
+    helperText: "Include prescription meds, OTC medicines, and supplements when possible.",
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" },
+    ],
+  },
+  {
+    id: "allergies",
+    section: "Allergies & Medications",
+    kind: "multi_select",
+    required: true,
+    label: "Which applies to allergies?",
+    helperText: "Select one or more options.",
+    options: [
+      { value: "none", label: "No known drug allergies" },
+      { value: "sildenafil", label: "Allergy to sildenafil" },
+      { value: "other_medication_allergies", label: "Other medication allergies" },
+      { value: "prefer_discuss", label: "Prefer to discuss with clinician" },
+    ],
+    showWhen: (data) => data.hasOtherAllergiesOrMedications === "yes",
+  },
+  {
+    id: "otherMedications",
+    section: "Allergies & Medications",
+    kind: "multi_select",
+    required: true,
+    label: "Which do you currently take?",
+    helperText: "Select all that apply.",
+    options: [
+      { value: "none", label: "None" },
+      { value: "blood_pressure_medications", label: "Blood pressure medications" },
+      { value: "alpha_blockers", label: "Alpha-blockers" },
+      { value: "nitrates", label: "Nitrates" },
+      { value: "diabetes_medications", label: "Diabetes medications" },
+      { value: "antidepressants", label: "Antidepressants" },
+      { value: "daily_supplements", label: "Daily supplements" },
+      { value: "other_prescription_medications", label: "Other prescription medications" },
+    ],
+    showWhen: (data) => data.hasOtherAllergiesOrMedications === "yes",
+  },
+];
 
 /** Soft edge on the particle canvas so pulses do not hard-clip to a rectangle */
 const PARTICLE_EDGE_MASK =
@@ -314,26 +515,41 @@ export default function AIAgentSection() {
   const [formMessage, setFormMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [callTime, setCallTime] = useState(0);
   const [visibleLines, setVisibleLines] = useState<TranscriptLine[]>([]);
-  const [formData, setFormData] = useState<IntakeFormData>({
-    edSymptoms: "no",
-    usesNitratesOrPoppers: "no",
-    recentCardioEvent: "no",
-    chestPainOrShortnessOfBreath: "no",
-    highBpOrAlphaBlockers: "no",
-    recentNormalBp: "yes",
-    severeConditions: "no",
-    penileConditions: "no",
-    bloodConditions: "no",
-    hasOtherAllergiesOrMedications: "no",
-    allergies: "",
-    otherMedications: "",
-  });
+  const [formData, setFormData] = useState<IntakeFormData>(INITIAL_FORM_DATA);
+  const [formStep, setFormStep] = useState(0);
+  const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const callActive =
     callStatus === "connecting" ||
     callStatus === "in-call" ||
     callStatus === "ending";
   const canCall = Boolean(vapi && assistantId);
+  const visibleQuestions = useMemo(
+    () => FORM_QUESTIONS.filter((question) => !question.showWhen || question.showWhen(formData)),
+    [formData],
+  );
+  const safeFormStep = Math.min(formStep, Math.max(visibleQuestions.length - 1, 0));
+  const progressPct = Math.round(((safeFormStep + 1) / Math.max(visibleQuestions.length, 1)) * 100);
+  const currentQuestion = visibleQuestions[safeFormStep];
+
+  const getQuestionError = useCallback(
+    (question: FormQuestion) => {
+      const value = formData[question.id];
+      if (!question.required) return null;
+      if (question.kind === "multi_select") {
+        return Array.isArray(value) && value.length > 0
+          ? null
+          : "Please select at least one option before continuing.";
+      }
+      return typeof value === "string" && value ? null : "Please choose one option to continue.";
+    },
+    [formData],
+  );
+
+  const isCurrentQuestionInvalid = currentQuestion ? Boolean(getQuestionError(currentQuestion)) : false;
+  const isQuestionVisibleError = (question: FormQuestion) =>
+    Boolean(getQuestionError(question)) && (submitAttempted || formTouched[question.id]);
 
   useEffect(() => {
     if (!callActive) {
@@ -528,6 +744,9 @@ export default function AIAgentSection() {
                 }
                 setIntakeMode("form");
                 setFormMessage(null);
+                setFormStep(0);
+                setFormTouched({});
+                setSubmitAttempted(false);
               }}
               className="mt-4 font-ibm text-[12px] text-text-secondary underline decoration-teal/50 underline-offset-2 transition-colors hover:text-text-primary"
             >
@@ -549,14 +768,23 @@ export default function AIAgentSection() {
               {intakeMode === "call" ? (
                 <ParticleCloudCanvas active={callActive} micLevelRef={micLevelRef} />
               ) : (
-                <div className="mx-auto flex min-h-[320px] w-full max-w-[780px] items-center justify-center px-2 py-5 sm:px-4">
+                <div className="mx-auto flex min-h-[320px] w-full max-w-[860px] items-center justify-center px-2 py-5 sm:px-4">
                   <form
-                    className="w-full rounded-[0.8rem] border border-[rgba(13,183,187,0.22)] bg-[rgba(6,8,16,0.7)] p-4 sm:p-6"
+                    className="w-full rounded-[0.8rem] border border-[rgba(13,183,187,0.22)] bg-[rgba(6,8,16,0.78)] p-4 sm:p-6"
                     onSubmit={async (event) => {
                       event.preventDefault();
+                      setSubmitAttempted(true);
                       setFormMessage(null);
-                      setIsSubmittingForm(true);
 
+                      const firstInvalidIndex = visibleQuestions.findIndex((question) =>
+                        Boolean(getQuestionError(question)),
+                      );
+                      if (firstInvalidIndex !== -1) {
+                        setFormStep(firstInvalidIndex);
+                        return;
+                      }
+
+                      setIsSubmittingForm(true);
                       try {
                         const response = await fetch("/api/intake-form", {
                           method: "POST",
@@ -572,6 +800,10 @@ export default function AIAgentSection() {
                           type: "success",
                           text: "Intake submitted successfully. We will follow up shortly.",
                         });
+                        setFormData(INITIAL_FORM_DATA);
+                        setFormStep(0);
+                        setFormTouched({});
+                        setSubmitAttempted(false);
                       } catch (error) {
                         setFormMessage({
                           type: "error",
@@ -585,132 +817,162 @@ export default function AIAgentSection() {
                       }
                     }}
                   >
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {[
-                        { key: "edSymptoms", label: "Are you experiencing ED symptoms?" },
-                        { key: "usesNitratesOrPoppers", label: "Do you use nitrates/poppers?" },
-                        { key: "recentCardioEvent", label: "Any recent cardiac event?" },
-                        { key: "chestPainOrShortnessOfBreath", label: "Chest pain or shortness of breath?" },
-                        { key: "highBpOrAlphaBlockers", label: "High BP or alpha blockers?" },
-                        { key: "recentNormalBp", label: "Recent normal blood pressure reading?" },
-                        { key: "severeConditions", label: "Any severe medical conditions?" },
-                        { key: "penileConditions", label: "Any penile conditions?" },
-                        { key: "bloodConditions", label: "Any blood conditions?" },
-                      ].map((item) => (
-                        <label key={item.key} className="block">
-                          <span className="mb-1 block font-ibm text-[11px] uppercase tracking-[0.08em] text-text-secondary">
-                            {item.label}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {(["yes", "no"] as const).map((choice) => (
+                    <div className="mb-4">
+                      <div className="mb-2 flex items-center justify-between font-ibm text-[11px] uppercase tracking-[0.08em] text-text-secondary">
+                        <span>
+                          Step {Math.min(safeFormStep + 1, visibleQuestions.length)} of {visibleQuestions.length}
+                        </span>
+                        <span>{progressPct}% complete</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-[rgba(13,183,187,0.12)]">
+                        <div
+                          className="h-full rounded-full bg-teal transition-all duration-300"
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {currentQuestion && (
+                      <div className="rounded-[0.7rem] border border-[rgba(13,183,187,0.2)] bg-[rgba(8,12,22,0.76)] p-4 sm:p-5">
+                        <p className="font-ibm text-[10px] uppercase tracking-[0.14em] text-teal/90">
+                          {currentQuestion.section}
+                        </p>
+                        <h3 className="mt-2 font-dm text-[20px] leading-tight text-text-primary">
+                          {currentQuestion.label}
+                        </h3>
+                        <p className="mt-2 font-ibm text-[12px] text-text-secondary">
+                          {currentQuestion.helperText}
+                        </p>
+
+                        {(currentQuestion.kind === "binary" || currentQuestion.kind === "multi") && (
+                          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {currentQuestion.options?.map((option) => (
                               <button
-                                key={choice}
+                                key={option.value}
                                 type="button"
-                                onClick={() =>
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    [item.key]: choice,
-                                  }))
-                                }
-                                className={`rounded-full border px-4 py-1.5 font-ibm text-[12px] uppercase tracking-[0.08em] transition-all ${
-                                  formData[item.key as keyof IntakeFormData] === choice
-                                    ? "border-teal/70 bg-teal text-void"
-                                    : "border-[rgba(13,183,187,0.26)] bg-[rgba(10,14,24,0.86)] text-text-secondary hover:text-text-primary"
+                                onClick={() => {
+                                  setFormTouched((prev) => ({ ...prev, [currentQuestion.id]: true }));
+                                  setFormData((prev) => {
+                                    const next = {
+                                      ...prev,
+                                      [currentQuestion.id]: option.value,
+                                    } as IntakeFormData;
+                                    if (
+                                      currentQuestion.id === "hasOtherAllergiesOrMedications" &&
+                                      option.value === "no"
+                                    ) {
+                                      next.allergies = [];
+                                      next.otherMedications = [];
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                className={`rounded-[0.5rem] border px-3 py-3 text-left font-ibm text-[12px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/70 ${
+                                  formData[currentQuestion.id] === option.value
+                                    ? "border-teal/70 bg-[rgba(13,183,187,0.22)] text-text-primary"
+                                    : "border-[rgba(13,183,187,0.26)] bg-[rgba(10,14,24,0.86)] text-text-secondary hover:border-teal/55 hover:text-text-primary"
                                 }`}
                               >
-                                {choice}
+                                {option.label}
                               </button>
                             ))}
                           </div>
-                        </label>
-                      ))}
+                        )}
 
-                      <label className="block sm:col-span-2">
-                        <span className="mb-1 block font-ibm text-[11px] uppercase tracking-[0.08em] text-text-secondary">
-                          Do you have other allergies or medications to share?
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {(["yes", "no"] as const).map((choice) => (
-                            <button
-                              key={`hasOther-${choice}`}
-                              type="button"
-                              onClick={() =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  hasOtherAllergiesOrMedications: choice,
-                                  ...(choice === "no"
-                                    ? { allergies: "", otherMedications: "" }
-                                    : {}),
-                                }))
-                              }
-                              className={`rounded-full border px-4 py-1.5 font-ibm text-[12px] uppercase tracking-[0.08em] transition-all ${
-                                formData.hasOtherAllergiesOrMedications === choice
-                                  ? "border-teal/70 bg-teal text-void"
-                                  : "border-[rgba(13,183,187,0.26)] bg-[rgba(10,14,24,0.86)] text-text-secondary hover:text-text-primary"
-                              }`}
-                            >
-                              {choice}
-                            </button>
-                          ))}
-                        </div>
-                      </label>
+                        {currentQuestion.kind === "multi_select" && (
+                          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {currentQuestion.options?.map((option) => {
+                              const selected = (formData[currentQuestion.id] as string[]).includes(option.value);
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormTouched((prev) => ({ ...prev, [currentQuestion.id]: true }));
+                                    setFormData((prev) => {
+                                      const current = [...(prev[currentQuestion.id] as string[])];
+                                      let nextValues: string[];
+                                      if (option.value === "none") {
+                                        nextValues = selected ? [] : ["none"];
+                                      } else {
+                                        const withoutNone = current.filter((v) => v !== "none");
+                                        nextValues = selected
+                                          ? withoutNone.filter((v) => v !== option.value)
+                                          : [...withoutNone, option.value];
+                                      }
+                                      return {
+                                        ...prev,
+                                        [currentQuestion.id]: nextValues,
+                                      };
+                                    });
+                                  }}
+                                  className={`rounded-[0.5rem] border px-3 py-3 text-left font-ibm text-[12px] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/70 ${
+                                    selected
+                                      ? "border-teal/70 bg-[rgba(13,183,187,0.22)] text-text-primary"
+                                      : "border-[rgba(13,183,187,0.26)] bg-[rgba(10,14,24,0.86)] text-text-secondary hover:border-teal/55 hover:text-text-primary"
+                                  }`}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
 
-                      {formData.hasOtherAllergiesOrMedications === "yes" && (
-                        <>
-                          <label className="block sm:col-span-2">
-                            <span className="mb-1 block font-ibm text-[11px] uppercase tracking-[0.08em] text-text-secondary">
-                              Allergies (comma separated)
-                            </span>
-                            <input
-                              type="text"
-                              value={formData.allergies}
-                              onChange={(e) =>
-                                setFormData((prev) => ({ ...prev, allergies: e.target.value }))
-                              }
-                              className="w-full rounded-[0.5rem] border border-[rgba(13,183,187,0.26)] bg-[rgba(10,14,24,0.86)] px-3 py-2 font-ibm text-[13px] text-text-primary outline-none transition-colors focus:border-teal"
-                              placeholder="e.g. Penicillin, Ibuprofen"
-                            />
-                          </label>
+                        {isQuestionVisibleError(currentQuestion) && (
+                          <p className="mt-3 font-ibm text-[11px] text-warning-amber">
+                            {getQuestionError(currentQuestion)}
+                          </p>
+                        )}
+                      </div>
+                    )}
 
-                          <label className="block sm:col-span-2">
-                            <span className="mb-1 block font-ibm text-[11px] uppercase tracking-[0.08em] text-text-secondary">
-                              Other Medications (comma separated)
-                            </span>
-                            <input
-                              type="text"
-                              value={formData.otherMedications}
-                              onChange={(e) =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  otherMedications: e.target.value,
-                                }))
-                              }
-                              className="w-full rounded-[0.5rem] border border-[rgba(13,183,187,0.26)] bg-[rgba(10,14,24,0.86)] px-3 py-2 font-ibm text-[13px] text-text-primary outline-none transition-colors focus:border-teal"
-                              placeholder="e.g. Metformin, Atorvastatin"
-                            />
-                          </label>
-                        </>
-                      )}
+                    <div className="mt-3 rounded-[0.6rem] border border-[rgba(13,183,187,0.16)] bg-[rgba(10,14,22,0.6)] px-3 py-2">
+                      <p className="font-ibm text-[11px] text-text-secondary">
+                        This secure intake is reviewed by a licensed clinician. Please answer as accurately as possible.
+                      </p>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="sticky bottom-0 mt-4 flex items-center justify-between gap-3 rounded-[0.6rem] border border-[rgba(13,183,187,0.2)] bg-[rgba(6,8,16,0.92)] px-3 py-3 backdrop-blur">
                       <button
                         type="button"
                         onClick={() => {
-                          setIntakeMode("call");
-                          setFormMessage(null);
+                          if (safeFormStep === 0) {
+                            setIntakeMode("call");
+                            setFormMessage(null);
+                            return;
+                          }
+                          setFormStep((prev) => Math.max(0, Math.min(prev, Math.max(visibleQuestions.length - 1, 0)) - 1));
                         }}
                         className="font-ibm text-[12px] text-text-secondary transition-colors hover:text-text-primary"
                       >
-                        Back to voice call
+                        {safeFormStep === 0 ? "Back to voice call" : "Back"}
                       </button>
-                      <button
-                        type="submit"
-                        disabled={isSubmittingForm}
-                        className="rounded-[0.45rem] border border-teal/50 bg-teal px-4 py-2 font-dm text-[14px] font-medium text-void shadow-sm transition-all duration-300 hover:brightness-105 disabled:cursor-wait disabled:opacity-80"
-                      >
-                        {isSubmittingForm ? "Submitting..." : "Submit Intake"}
-                      </button>
+
+                      <div className="flex items-center gap-2">
+                        {safeFormStep < visibleQuestions.length - 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!currentQuestion) return;
+                              setFormTouched((prev) => ({ ...prev, [currentQuestion.id]: true }));
+                              if (isCurrentQuestionInvalid) return;
+                              setFormStep((prev) => Math.min(visibleQuestions.length - 1, prev + 1));
+                            }}
+                            className="rounded-[0.45rem] border border-teal/50 bg-teal px-4 py-2 font-dm text-[14px] font-medium text-void shadow-sm transition-all duration-300 hover:brightness-105"
+                          >
+                            Continue
+                          </button>
+                        ) : (
+                          <button
+                            type="submit"
+                            disabled={isSubmittingForm}
+                            className="rounded-[0.45rem] border border-teal/50 bg-teal px-4 py-2 font-dm text-[14px] font-medium text-void shadow-sm transition-all duration-300 hover:brightness-105 disabled:cursor-wait disabled:opacity-80"
+                          >
+                            {isSubmittingForm ? "Submitting..." : "Submit Intake"}
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {formMessage && (

@@ -34,7 +34,7 @@ export const turnExtractionSchema = z.object({
       evidence: z.string().max(500),
     }),
   ),
-  suggestedSay: z.string().max(320).nullable(),
+  suggestedSay: z.string().nullable(),
 });
 
 export type TurnExtraction = z.infer<typeof turnExtractionSchema>;

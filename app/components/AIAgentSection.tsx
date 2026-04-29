@@ -57,9 +57,15 @@ type FormQuestion = {
   showWhen?: (data: IntakeFormData) => boolean;
 };
 
+type FormHardStop = {
+  title: string;
+  message: string;
+};
+
 const CALL_OUT_NUMBER = "+14435589279";
 const CALL_OUT_LABEL = "+1 (443) 558-9279";
 const SHOW_LIVE_TRANSCRIPT = false;
+const FORM_HARD_STOP_TITLE = "This medication is not for you.";
 const INITIAL_FORM_DATA: IntakeFormData = {
   edSymptoms: "",
   usesNitratesOrPoppers: "",
@@ -240,6 +246,37 @@ const FORM_QUESTIONS: FormQuestion[] = [
     showWhen: (data) => data.hasOtherAllergiesOrMedications === "yes",
   },
 ];
+
+function getFormHardStop(data: IntakeFormData): FormHardStop | null {
+  if (data.usesNitratesOrPoppers === "yes" || data.otherMedications.includes("nitrates")) {
+    return {
+      title: FORM_HARD_STOP_TITLE,
+      message:
+        "Sildenafil is not safe to use with nitrates or poppers. Please speak with your doctor about safe alternatives.",
+    };
+  }
+
+  if (data.recentCardioEvent === "yes") {
+    return {
+      title: FORM_HARD_STOP_TITLE,
+      message:
+        "Because of that recent heart or stroke history, we cannot continue this intake.",
+    };
+  }
+
+  if (
+    data.chestPainOrShortnessOfBreath &&
+    data.chestPainOrShortnessOfBreath !== "no"
+  ) {
+    return {
+      title: FORM_HARD_STOP_TITLE,
+      message:
+        "Because chest pain or severe shortness of breath with light activity can make this medication unsafe, we cannot continue this intake.",
+    };
+  }
+
+  return null;
+}
 
 /** Soft edge on the particle canvas so pulses do not hard-clip to a rectangle */
 const PARTICLE_EDGE_MASK =
@@ -527,6 +564,7 @@ export default function AIAgentSection() {
     () => FORM_QUESTIONS.filter((question) => !question.showWhen || question.showWhen(formData)),
     [formData],
   );
+  const formHardStop = useMemo(() => getFormHardStop(formData), [formData]);
   const safeFormStep = Math.min(formStep, Math.max(visibleQuestions.length - 1, 0));
   const progressPct = Math.round(((safeFormStep + 1) / Math.max(visibleQuestions.length, 1)) * 100);
   const currentQuestion = visibleQuestions[safeFormStep];
@@ -774,6 +812,8 @@ export default function AIAgentSection() {
                       setSubmitAttempted(true);
                       setFormMessage(null);
 
+                      if (formHardStop) return;
+
                       const firstInvalidIndex = visibleQuestions.findIndex((question) =>
                         Boolean(getQuestionError(question)),
                       );
@@ -830,7 +870,48 @@ export default function AIAgentSection() {
                       </div>
                     </div>
 
-                    {currentQuestion && (
+                    {formHardStop ? (
+                      <div className="rounded-[0.7rem] border border-warning-amber/35 bg-[rgba(26,18,10,0.78)] p-5 sm:p-6">
+                        <p className="font-ibm text-[10px] uppercase tracking-[0.14em] text-warning-amber">
+                          Intake ended
+                        </p>
+                        <h3 className="mt-2 font-dm text-[22px] leading-tight text-text-primary">
+                          {formHardStop.title}
+                        </h3>
+                        <p className="mt-3 font-ibm text-[12px] leading-relaxed text-text-secondary">
+                          {formHardStop.message}
+                        </p>
+                        <div className="mt-5 flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(INITIAL_FORM_DATA);
+                              setFormStep(0);
+                              setFormTouched({});
+                              setSubmitAttempted(false);
+                              setFormMessage(null);
+                            }}
+                            className="rounded-[0.45rem] border border-teal/50 bg-teal px-4 py-2 font-dm text-[14px] font-medium text-void shadow-sm transition-all duration-300 hover:brightness-105"
+                          >
+                            Start Over
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIntakeMode("call");
+                              setFormData(INITIAL_FORM_DATA);
+                              setFormStep(0);
+                              setFormTouched({});
+                              setSubmitAttempted(false);
+                              setFormMessage(null);
+                            }}
+                            className="font-ibm text-[12px] text-text-secondary transition-colors hover:text-text-primary"
+                          >
+                            Back to voice call
+                          </button>
+                        </div>
+                      </div>
+                    ) : currentQuestion && (
                       <div className="rounded-[0.7rem] border border-[rgba(13,183,187,0.2)] bg-[rgba(8,12,22,0.76)] p-4 sm:p-5">
                         <p className="font-ibm text-[10px] uppercase tracking-[0.14em] text-teal/90">
                           {currentQuestion.section}
@@ -925,53 +1006,57 @@ export default function AIAgentSection() {
                       </div>
                     )}
 
-                    <div className="mt-3 rounded-[0.6rem] border border-[rgba(13,183,187,0.16)] bg-[rgba(10,14,22,0.6)] px-3 py-2">
-                      <p className="font-ibm text-[11px] text-text-secondary">
-                        This secure intake is reviewed by a licensed clinician. Please answer as accurately as possible.
-                      </p>
-                    </div>
-
-                    <div className="sticky bottom-0 mt-4 flex items-center justify-between gap-3 rounded-[0.6rem] border border-[rgba(13,183,187,0.2)] bg-[rgba(6,8,16,0.92)] px-3 py-3 backdrop-blur">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (safeFormStep === 0) {
-                            setIntakeMode("call");
-                            setFormMessage(null);
-                            return;
-                          }
-                          setFormStep((prev) => Math.max(0, Math.min(prev, Math.max(visibleQuestions.length - 1, 0)) - 1));
-                        }}
-                        className="font-ibm text-[12px] text-text-secondary transition-colors hover:text-text-primary"
-                      >
-                        {safeFormStep === 0 ? "Back to voice call" : "Back"}
-                      </button>
-
-                      <div className="flex items-center gap-2">
-                        {safeFormStep < visibleQuestions.length - 1 ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!currentQuestion) return;
-                              setFormTouched((prev) => ({ ...prev, [currentQuestion.id]: true }));
-                              if (isCurrentQuestionInvalid) return;
-                              setFormStep((prev) => Math.min(visibleQuestions.length - 1, prev + 1));
-                            }}
-                            className="rounded-[0.45rem] border border-teal/50 bg-teal px-4 py-2 font-dm text-[14px] font-medium text-void shadow-sm transition-all duration-300 hover:brightness-105"
-                          >
-                            Continue
-                          </button>
-                        ) : (
-                          <button
-                            type="submit"
-                            disabled={isSubmittingForm}
-                            className="rounded-[0.45rem] border border-teal/50 bg-teal px-4 py-2 font-dm text-[14px] font-medium text-void shadow-sm transition-all duration-300 hover:brightness-105 disabled:cursor-wait disabled:opacity-80"
-                          >
-                            {isSubmittingForm ? "Submitting..." : "Submit Intake"}
-                          </button>
-                        )}
+                    {!formHardStop && (
+                      <div className="mt-3 rounded-[0.6rem] border border-[rgba(13,183,187,0.16)] bg-[rgba(10,14,22,0.6)] px-3 py-2">
+                        <p className="font-ibm text-[11px] text-text-secondary">
+                          This secure intake is reviewed by a licensed clinician. Please answer as accurately as possible.
+                        </p>
                       </div>
-                    </div>
+                    )}
+
+                    {!formHardStop && (
+                      <div className="sticky bottom-0 mt-4 flex items-center justify-between gap-3 rounded-[0.6rem] border border-[rgba(13,183,187,0.2)] bg-[rgba(6,8,16,0.92)] px-3 py-3 backdrop-blur">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (safeFormStep === 0) {
+                              setIntakeMode("call");
+                              setFormMessage(null);
+                              return;
+                            }
+                            setFormStep((prev) => Math.max(0, Math.min(prev, Math.max(visibleQuestions.length - 1, 0)) - 1));
+                          }}
+                          className="font-ibm text-[12px] text-text-secondary transition-colors hover:text-text-primary"
+                        >
+                          {safeFormStep === 0 ? "Back to voice call" : "Back"}
+                        </button>
+
+                        <div className="flex items-center gap-2">
+                          {safeFormStep < visibleQuestions.length - 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!currentQuestion) return;
+                                setFormTouched((prev) => ({ ...prev, [currentQuestion.id]: true }));
+                                if (isCurrentQuestionInvalid) return;
+                                setFormStep((prev) => Math.min(visibleQuestions.length - 1, prev + 1));
+                              }}
+                              className="rounded-[0.45rem] border border-teal/50 bg-teal px-4 py-2 font-dm text-[14px] font-medium text-void shadow-sm transition-all duration-300 hover:brightness-105"
+                            >
+                              Continue
+                            </button>
+                          ) : (
+                            <button
+                              type="submit"
+                              disabled={isSubmittingForm}
+                              className="rounded-[0.45rem] border border-teal/50 bg-teal px-4 py-2 font-dm text-[14px] font-medium text-void shadow-sm transition-all duration-300 hover:brightness-105 disabled:cursor-wait disabled:opacity-80"
+                            >
+                              {isSubmittingForm ? "Submitting..." : "Submit Intake"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {formMessage && (
                       <p

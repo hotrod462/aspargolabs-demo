@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import * as Collapsible from "@radix-ui/react-collapsible";
+import { ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   EXTRACTION_INTERRUPTS,
   INTERRUPT_DISPLAY,
@@ -17,6 +19,68 @@ import {
 } from "@/lib/intake/schema";
 import type { CallSession, IntakeEvent, IntakeField } from "@/lib/storage/intake-store";
 import { createClient } from "@/utils/supabase/client";
+
+/** Radix collapsible wrapper for intake monitor panels (accessible trigger + chevron affordance). */
+function MonitorCollapsible({
+  title,
+  defaultOpen,
+  children,
+  className,
+  titleClassName = "text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400",
+  contentClassName = "border-t border-black/10 px-4 pb-4 pt-3 dark:border-white/15",
+  aside,
+  triggerClassName,
+}: {
+  title: ReactNode;
+  defaultOpen: boolean;
+  children: ReactNode;
+  className?: string;
+  /** Applied to `<h3>` only when `title` is a string. */
+  titleClassName?: string;
+  /** Extra padding/border wrapper for expandable body. */
+  contentClassName?: string;
+  /** Optional slot after title (e.g. loading spinner) inside the trigger row */
+  aside?: ReactNode;
+  /** Trigger row padding / alignment overrides */
+  triggerClassName?: string;
+}) {
+  return (
+    <Collapsible.Root defaultOpen={defaultOpen}>
+      <div
+        className={
+          className ??
+          "mt-6 rounded-xl border border-black/10 bg-zinc-50/80 dark:border-white/15 dark:bg-zinc-900/40"
+        }
+      >
+        <Collapsible.Trigger
+          type="button"
+          className={
+            triggerClassName ??
+            "flex w-full items-start justify-between gap-3 rounded-t-xl px-4 py-3 text-left outline-none hover:bg-black/[0.03] focus-visible:ring-2 focus-visible:ring-zinc-400/80 dark:hover:bg-white/[0.05] dark:focus-visible:ring-zinc-500/70 [&[data-state=open]_.monitor-collapse-chevron]:rotate-180"
+          }
+        >
+          <div className="flex min-w-0 flex-1 items-start gap-2">
+            <div className="min-w-0 flex-1">
+              {typeof title === "string" ? (
+                <h3 className={titleClassName}>{title}</h3>
+              ) : (
+                title
+              )}
+            </div>
+            {aside ? <span className="mt-px shrink-0">{aside}</span> : null}
+          </div>
+          <ChevronDown
+            className="monitor-collapse-chevron mt-0.5 h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 dark:text-zinc-400"
+            aria-hidden
+          />
+        </Collapsible.Trigger>
+        <Collapsible.Content className="data-[state=closed]:hidden">
+          <div className={contentClassName}>{children}</div>
+        </Collapsible.Content>
+      </div>
+    </Collapsible.Root>
+  );
+}
 
 function formatMsPretty(ms: number): string {
   if (!Number.isFinite(ms)) return "—";
@@ -465,11 +529,8 @@ function IntakeFieldsDetailPanel({ fields }: { fields: IntakeField[] }) {
   const { collected, issue, total } = intakeFieldSummary(fields);
 
   return (
-    <div className="mt-6 rounded-xl border border-black/10 bg-white p-4 dark:border-white/15 dark:bg-zinc-950/40">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
-        Intake fields (database)
-      </h3>
-      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+    <>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
         Rows from <code className="rounded bg-zinc-100 px-1 text-[11px] dark:bg-zinc-800">intake_fields</code>.{" "}
         <span className="font-medium text-zinc-700 dark:text-zinc-300">
           {collected}/{total}
@@ -526,7 +587,7 @@ function IntakeFieldsDetailPanel({ fields }: { fields: IntakeField[] }) {
           </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -773,7 +834,7 @@ export function IntakeMonitorClient({
         <h1 className="text-xl font-semibold">Intake Calls</h1>
         <p className="mt-1 text-xs text-zinc-500">Showing counts for the newest {sessions.length} calls loaded.</p>
 
-        <details className="mt-4 rounded-xl border border-black/10 px-3 py-2 dark:border-white/15" open>
+        <details className="mt-4 rounded-xl border border-black/10 px-3 py-2 dark:border-white/15">
           <summary className="cursor-pointer text-sm font-medium text-zinc-700 dark:text-zinc-200">
             Filter by call status
           </summary>
@@ -900,11 +961,8 @@ export function IntakeMonitorClient({
               </div>
 
               {timingPanel && (
-                <div className="mt-6 rounded-xl border border-black/10 bg-zinc-50/80 p-4 text-sm dark:border-white/15 dark:bg-zinc-900/40">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
-                    Timing & throughput
-                  </h3>
-                  <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                <MonitorCollapsible defaultOpen={false} title="Timing & throughput">
+                  <dl className="grid gap-2 text-sm sm:grid-cols-2">
                     <div>
                       <dt className="text-xs text-zinc-500">Call wall time</dt>
                       <dd className="text-zinc-900 dark:text-zinc-100">
@@ -927,7 +985,7 @@ export function IntakeMonitorClient({
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-zinc-500">Groq extraction (LLM) — total</dt>
+                      <dt className="text-xs text-zinc-500">LLM extraction — total</dt>
                       <dd className="font-mono text-zinc-900 dark:text-zinc-100">
                         {timingPanel.llmTotalEffective != null
                           ? formatMsPretty(timingPanel.llmTotalEffective)
@@ -950,7 +1008,7 @@ export function IntakeMonitorClient({
                       </dd>
                     </div>
                     <div className="sm:col-span-2 border-t border-black/10 pt-2 dark:border-white/15">
-                      <dt className="text-xs text-zinc-500">Approx. non-LLM time (wall − Groq extraction sum)</dt>
+                      <dt className="text-xs text-zinc-500">Approx. non-LLM time (wall − LLM extraction sum)</dt>
                       <dd className="font-mono text-xs text-zinc-800 dark:text-zinc-200">
                         {timingPanel.wallAvailable &&
                         timingPanel.callWallClockMs != null &&
@@ -977,18 +1035,30 @@ export function IntakeMonitorClient({
                       </dd>
                     </div>
                   </dl>
-                  <p className="mt-2 text-[11px] text-zinc-500">
+                  <p className="mt-3 text-[11px] text-zinc-500">
                     Totals update on <code className="rounded bg-zinc-200/70 px-1 dark:bg-zinc-800">call_sessions.metadata</code> after each
                     successful extraction. Event rows also store <code className="rounded bg-zinc-200/70 px-1 dark:bg-zinc-800">llm_latency_ms</code>{" "}
                     per turn for cross-checking pipelines (Vapi, alternate models, etc.).
                   </p>
-                </div>
+                </MonitorCollapsible>
               )}
 
-              <IntakeFieldsDetailPanel fields={selectedFields} />
+              <MonitorCollapsible
+                defaultOpen
+                title="Intake fields (database)"
+                className="mt-6 rounded-xl border border-black/10 bg-white dark:border-white/15 dark:bg-zinc-950/40"
+                contentClassName="border-t border-black/10 px-4 pb-4 pt-3 dark:border-white/15"
+              >
+                <IntakeFieldsDetailPanel fields={selectedFields} />
+              </MonitorCollapsible>
 
-              <div className="mt-8">
-                <h3 className="mb-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">FSM progress</h3>
+              <MonitorCollapsible
+                defaultOpen
+                title="FSM progress & visit order"
+                titleClassName="text-sm font-medium normal-case tracking-normal text-zinc-600 dark:text-zinc-400"
+                className="mt-8 rounded-xl border border-black/10 bg-zinc-50/80 dark:border-white/15 dark:bg-zinc-900/40"
+                contentClassName="border-t border-black/10 px-4 pb-4 pt-3 dark:border-white/15"
+              >
                 <div className="flex flex-wrap gap-2">
                   {INTAKE_STATES.map((state, i) => {
                     let tone =
@@ -1038,75 +1108,84 @@ export function IntakeMonitorClient({
                   })}
                 </div>
 
-                <div className="mt-6 space-y-4 border-t border-black/10 pt-6 dark:border-white/15">
-                  <div>
-                    <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
-                      Visit order (each user turn · repeats → same-step / clarification loop)
-                    </h4>
-                    <p className="break-words rounded-lg border border-black/10 bg-zinc-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-zinc-800 dark:border-white/15 dark:bg-zinc-900/80 dark:text-zinc-200">
-                      {transcriptPath.length === 0 ? "—" : transcriptPath.join(" → ")}
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
-                      Extractor signals (interrupts & conditions hit on this call)
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {EXTRACTION_INTERRUPTS.filter((id) => id !== "none").map((id) => {
-                        const active = callSignals.interruptHits.has(id);
-                        return (
-                          <span
-                            key={id}
-                            title={`${id}: ${INTERRUPT_DISPLAY[id] ?? id}`}
-                            className={`rounded-lg border px-2 py-1 text-[11px] ${
-                              active
-                                ? "border-violet-500 ring-2 ring-violet-500/40 dark:border-violet-400 dark:ring-violet-500/35"
-                                : "border-dashed border-black/15 text-zinc-400 dark:border-white/20"
-                            }`}
-                          >
-                            {INTERRUPT_DISPLAY[id] ?? id}
-                          </span>
-                        );
-                      })}
-                      {SYNTHETIC_SIGNAL_IDS.map((id) => {
-                        const active =
-                          (id === "answer_unclear" && callSignals.answerUnclear) ||
-                          (id === "low_confidence" && callSignals.lowConfidence) ||
-                          (id === "extraction_failed" && callSignals.extractionError);
-                        return (
-                          <span
-                            key={id}
-                            className={`rounded-lg border px-2 py-1 text-[11px] ${
-                              active
-                                ? "border-rose-500 ring-2 ring-rose-400/35 dark:border-rose-400"
-                                : "border-dashed border-black/15 text-zinc-400 dark:border-white/20"
-                            }`}
-                          >
-                            {SYNTHETIC_DISPLAY[id]}
-                          </span>
-                        );
-                      })}
-                    </div>
-                    <p className="mt-2 text-[11px] text-zinc-500">
-                      Violet = interrupt flagged on ≥1 extraction. Rose = ambiguous answer, confidence &lt; 0.7, or extractor error.
-                      Inactive chips are shown dimmed so you can see everything the model might surface.
-                    </p>
-                  </div>
+                <div className="mt-6 border-t border-black/10 pt-6 dark:border-white/15">
+                  <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
+                    Visit order (each user turn · repeats → same-step / clarification loop)
+                  </h4>
+                  <p className="break-words rounded-lg border border-black/10 bg-zinc-50 px-3 py-2 font-mono text-[11px] leading-relaxed text-zinc-800 dark:border-white/15 dark:bg-zinc-900/80 dark:text-zinc-200">
+                    {transcriptPath.length === 0 ? "—" : transcriptPath.join(" → ")}
+                  </p>
                 </div>
-              </div>
+              </MonitorCollapsible>
+
+              <MonitorCollapsible
+                defaultOpen
+                title="Extractor signals"
+                titleClassName="text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400"
+                className="mt-6 rounded-xl border border-black/10 bg-zinc-50/80 dark:border-white/15 dark:bg-zinc-900/40"
+                contentClassName="border-t border-black/10 px-4 pb-4 pt-3 dark:border-white/15"
+              >
+                <p className="mb-3 text-[11px] text-zinc-500">
+                  Interrupts and conditions hit on this call (from extractions).
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {EXTRACTION_INTERRUPTS.filter((id) => id !== "none").map((id) => {
+                    const active = callSignals.interruptHits.has(id);
+                    return (
+                      <span
+                        key={id}
+                        title={`${id}: ${INTERRUPT_DISPLAY[id] ?? id}`}
+                        className={`rounded-lg border px-2 py-1 text-[11px] ${
+                          active
+                            ? "border-violet-500 ring-2 ring-violet-500/40 dark:border-violet-400 dark:ring-violet-500/35"
+                            : "border-dashed border-black/15 text-zinc-400 dark:border-white/20"
+                        }`}
+                      >
+                        {INTERRUPT_DISPLAY[id] ?? id}
+                      </span>
+                    );
+                  })}
+                  {SYNTHETIC_SIGNAL_IDS.map((id) => {
+                    const active =
+                      (id === "answer_unclear" && callSignals.answerUnclear) ||
+                      (id === "low_confidence" && callSignals.lowConfidence) ||
+                      (id === "extraction_failed" && callSignals.extractionError);
+                    return (
+                      <span
+                        key={id}
+                        className={`rounded-lg border px-2 py-1 text-[11px] ${
+                          active
+                            ? "border-rose-500 ring-2 ring-rose-400/35 dark:border-rose-400"
+                            : "border-dashed border-black/15 text-zinc-400 dark:border-white/20"
+                        }`}
+                      >
+                        {SYNTHETIC_DISPLAY[id]}
+                      </span>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[11px] text-zinc-500">
+                  Violet = interrupt flagged on ≥1 extraction. Rose = ambiguous answer, confidence &lt; 0.7, or
+                  extractor error. Inactive chips are shown dimmed so you can see everything the model might surface.
+                </p>
+              </MonitorCollapsible>
             </div>
 
-            <div className="rounded-2xl border border-black/10 p-6 dark:border-white/15">
-              <div className="flex items-center justify-between gap-4">
-                <h3 className="text-lg font-semibold">Run trace</h3>
-                {eventsLoading && <span className="text-xs text-zinc-500">Loading events…</span>}
-              </div>
+            <MonitorCollapsible
+              defaultOpen={false}
+              title={<span className="text-lg font-semibold tracking-tight">Run trace</span>}
+              aside={
+                eventsLoading ? <span className="text-xs text-zinc-500">Loading events…</span> : undefined
+              }
+              className="rounded-2xl border border-black/10 bg-white dark:border-white/15 dark:bg-zinc-950/20"
+              contentClassName="border-t border-black/10 px-6 pb-6 pt-3 dark:border-white/15"
+              triggerClassName="flex w-full items-center justify-between gap-4 rounded-t-2xl px-6 py-6 text-left outline-none hover:bg-black/[0.03] focus-visible:ring-2 focus-visible:ring-zinc-400/80 dark:hover:bg-white/[0.05] dark:focus-visible:ring-zinc-500/70 [&[data-state=open]_.monitor-collapse-chevron]:rotate-180"
+            >
               {eventsError && (
-                <p className="mt-2 text-sm text-red-600 dark:text-red-400">{eventsError}</p>
+                <p className="mb-4 text-sm text-red-600 dark:text-red-400">{eventsError}</p>
               )}
               {!eventsLoading && events.length === 0 && !eventsError && (
-                <p className="mt-2 text-sm text-zinc-500">No events recorded for this session yet.</p>
+                <p className="mb-4 text-sm text-zinc-500">No events recorded for this session yet.</p>
               )}
               <ol className="relative mt-4 border-l border-zinc-300 pl-6 dark:border-zinc-600">
                 {events.map((ev) => {
@@ -1133,7 +1212,7 @@ export function IntakeMonitorClient({
                   );
                 })}
               </ol>
-            </div>
+            </MonitorCollapsible>
           </>
         )}
       </section>

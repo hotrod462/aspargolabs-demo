@@ -89,4 +89,6 @@ export interface IntakeStore {
   listRecentSessions(limit?: number): Promise<CallSession[]>;
   getFieldsForSession(sessionId: string): Promise<IntakeField[]>;
   getEventsForSession(sessionId: string): Promise<IntakeEvent[]>;
+  /** Cumulative extraction LLM metrics on `call_sessions.metadata` for monitors / analytics. */
+  recordExtractionLlmTiming(sessionId: string, llmLatencyMs: number, modelId: string): Promise<void>;
 }

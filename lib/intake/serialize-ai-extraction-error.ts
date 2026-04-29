@@ -121,12 +121,17 @@ export interface TurnExtractionErrorPersistPayload extends Record<string, unknow
   transcript: string;
   transcript_chars: number;
   serialized_error: unknown;
+  /** Groq structured-output attempt duration until failure (ms). */
+  llm_latency_ms?: number;
+  intake_llm_model?: string;
 }
 
 export function buildTurnExtractionErrorPayload(input: {
   state: string;
   transcript: string;
   error: unknown;
+  llm_latency_ms?: number;
+  intake_llm_model?: string;
 }): TurnExtractionErrorPersistPayload {
   const t =
     input.transcript.length > MAX_STRING_CHARS
@@ -138,5 +143,7 @@ export function buildTurnExtractionErrorPayload(input: {
     transcript: t,
     transcript_chars: input.transcript.length,
     serialized_error: serializeAiExtractionFailure(input.error, 0),
+    ...(input.llm_latency_ms != null ? { llm_latency_ms: input.llm_latency_ms } : {}),
+    ...(input.intake_llm_model != null ? { intake_llm_model: input.intake_llm_model } : {}),
   };
 }

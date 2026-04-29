@@ -40,6 +40,18 @@ export type CallStatus =
   | "needs_review"
   | "abandoned";
 
+/** All bucket values for filtering / analytics (call_sessions.status). */
+export const CALL_STATUSES: readonly CallStatus[] = [
+  "in_progress",
+  "completed",
+  "hard_stop",
+  "ineligible",
+  "emergency",
+  "proxy_caller",
+  "needs_review",
+  "abandoned",
+] as const;
+
 export type FieldStatus =
   | "pending"
   | "asked"

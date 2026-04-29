@@ -1,5 +1,6 @@
 import { extractIntakeTurn, type TurnExtraction } from "./extractor";
 import { buildTurnExtractionErrorPayload } from "./serialize-ai-extraction-error";
+import { INTAKE_LLM_MODEL_ID } from "@/lib/llm/groq";
 import { completionPct, FSM_CONFIG, type TransitionKey } from "./fsm";
 import { INTAKE_STATES, type AnyState, CallStatus, IntakeState } from "./schema";
 import type { IntakeStore } from "@/lib/storage/intake-store";
@@ -99,17 +100,28 @@ export async function processIntakeTurn(
   await store.saveEvent({
     session_id: session.id,
     event_type: "transcript",
-    payload: { state: currentState, transcript: input.transcript },
+    payload: {
+      state: currentState,
+      transcript: input.transcript,
+      /** Wall-clock receipt (epoch ms); for correlation with webhook / Vapi traces. */
+      received_at_epoch_ms: Date.now(),
+    },
     idempotency_key: input.toolCallId ? `tool:${input.toolCallId}:transcript` : null,
   });
 
   let extraction: TurnExtraction;
+  let llmLatencyMs: number;
+
+  const extractStarted = performance.now();
   try {
-    extraction = await extractIntakeTurn({
+    const result = await extractIntakeTurn({
       currentState,
       transcript: input.transcript,
     });
+    extraction = result.extraction;
+    llmLatencyMs = result.llmLatencyMs;
   } catch (error) {
+    const elapsedToFailMs = Math.round(performance.now() - extractStarted);
     await store.saveEvent({
       session_id: session.id,
       event_type: "turn_extraction_error",
@@ -117,6 +129,8 @@ export async function processIntakeTurn(
         state: currentState,
         transcript: input.transcript,
         error,
+        llm_latency_ms: elapsedToFailMs,
+        intake_llm_model: INTAKE_LLM_MODEL_ID,
       }),
       idempotency_key: input.toolCallId ? `tool:${input.toolCallId}:extraction_error` : null,
     });
@@ -126,9 +140,16 @@ export async function processIntakeTurn(
   await store.saveEvent({
     session_id: session.id,
     event_type: "turn_extraction",
-    payload: { state: currentState, extraction },
+    payload: {
+      state: currentState,
+      extraction,
+      llm_latency_ms: llmLatencyMs,
+      intake_llm_model: INTAKE_LLM_MODEL_ID,
+    },
     idempotency_key: input.toolCallId ? `tool:${input.toolCallId}:extraction` : null,
   });
+
+  await store.recordExtractionLlmTiming(session.id, llmLatencyMs, INTAKE_LLM_MODEL_ID);
 
   for (const slot of extraction.futureSlots) {
     await store.upsertFutureSlot({

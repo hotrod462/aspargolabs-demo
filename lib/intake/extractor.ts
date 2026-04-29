@@ -36,13 +36,20 @@ export const turnExtractionSchema = z.object({
 
 export type TurnExtraction = z.infer<typeof turnExtractionSchema>;
 
+export interface ExtractIntakeTurnResult {
+  extraction: TurnExtraction;
+  /** Round-trip latency for Groq `generateText` (structured extraction), milliseconds. */
+  llmLatencyMs: number;
+}
+
 export async function extractIntakeTurn(input: {
   currentState: IntakeState;
   transcript: string;
   recentContext?: string;
-}): Promise<TurnExtraction> {
+}): Promise<ExtractIntakeTurnResult> {
   const state = FSM_CONFIG[input.currentState];
 
+  const started = performance.now();
   const result = await generateText({
     model: intakeModel,
     output: Output.object({ schema: turnExtractionSchema }),
@@ -72,5 +79,7 @@ export async function extractIntakeTurn(input: {
       .join("\n\n"),
   });
 
-  return result.output;
+  const llmLatencyMs = Math.round(performance.now() - started);
+
+  return { extraction: result.output, llmLatencyMs };
 }

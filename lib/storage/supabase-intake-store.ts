@@ -167,6 +167,29 @@ export class SupabaseIntakeStore implements IntakeStore {
     if (error) throw new Error(`getEventsForSession failed: ${error.message}`);
     return (data ?? []) as unknown as IntakeEvent[];
   }
+
+  async recordExtractionLlmTiming(sessionId: string, llmLatencyMs: number, modelId: string): Promise<void> {
+    const row = await this.getSessionById(sessionId);
+    if (!row) return;
+    const m = (row.metadata ?? {}) as Record<string, unknown>;
+    const totalPrev = typeof m.llm_extraction_ms_total === "number" ? m.llm_extraction_ms_total : 0;
+    const turnsPrev = typeof m.llm_extraction_turns === "number" ? m.llm_extraction_turns : 0;
+
+    const { error } = await supabaseAdmin
+      .from("call_sessions")
+      .update({
+        metadata: {
+          ...m,
+          llm_extraction_ms_total: totalPrev + llmLatencyMs,
+          llm_extraction_turns: turnsPrev + 1,
+          last_llm_latency_ms: llmLatencyMs,
+          intake_llm_model: modelId,
+        } as Json,
+      } as never)
+      .eq("id", sessionId);
+
+    if (error) throw new Error(`recordExtractionLlmTiming failed: ${error.message}`);
+  }
 }
 
 export const intakeStore = new SupabaseIntakeStore();

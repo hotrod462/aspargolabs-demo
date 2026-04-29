@@ -1,4 +1,5 @@
-import { extractIntakeTurn } from "./extractor";
+import { extractIntakeTurn, type TurnExtraction } from "./extractor";
+import { buildTurnExtractionErrorPayload } from "./serialize-ai-extraction-error";
 import { completionPct, FSM_CONFIG, type TransitionKey } from "./fsm";
 import { INTAKE_STATES, type AnyState, CallStatus, IntakeState } from "./schema";
 import type { IntakeStore } from "@/lib/storage/intake-store";
@@ -102,10 +103,25 @@ export async function processIntakeTurn(
     idempotency_key: input.toolCallId ? `tool:${input.toolCallId}:transcript` : null,
   });
 
-  const extraction = await extractIntakeTurn({
-    currentState,
-    transcript: input.transcript,
-  });
+  let extraction: TurnExtraction;
+  try {
+    extraction = await extractIntakeTurn({
+      currentState,
+      transcript: input.transcript,
+    });
+  } catch (error) {
+    await store.saveEvent({
+      session_id: session.id,
+      event_type: "turn_extraction_error",
+      payload: buildTurnExtractionErrorPayload({
+        state: currentState,
+        transcript: input.transcript,
+        error,
+      }),
+      idempotency_key: input.toolCallId ? `tool:${input.toolCallId}:extraction_error` : null,
+    });
+    throw error;
+  }
 
   await store.saveEvent({
     session_id: session.id,

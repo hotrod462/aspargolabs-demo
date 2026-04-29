@@ -24,6 +24,14 @@ function summarizeEvent(event: IntakeEvent): string {
       const st = typeof p.state === "string" ? p.state : "";
       return st ? `${st}: ${parts.join(", ")}` : parts.join(", ") || "Extraction";
     }
+    case "turn_extraction_error": {
+      const st = typeof p.state === "string" ? p.state : "";
+      const se = p.serialized_error as Record<string, unknown> | undefined;
+      let detail = "unknown";
+      if (se && typeof se.message === "string") detail = se.message.slice(0, 140);
+      else if (se && typeof se.type === "string") detail = se.type;
+      return `Extraction failed${st ? ` @ ${st}` : ""}: ${detail}`;
+    }
     case "assistant_turn": {
       const say = typeof p.say === "string" ? p.say : "";
       const clip = say.length > 160 ? `${say.slice(0, 160)}…` : say;

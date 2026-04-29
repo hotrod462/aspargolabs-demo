@@ -8,12 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "vapi:export": "dotenv -e .env -- node scripts/vapi-export-assistants.mjs",
-    "vapi:sync": "dotenv -e .env -- node scripts/vapi-sync-assistants.mjs",
-    "vapi:sync-tools": "dotenv -e .env -- node scripts/vapi-sync-tools.mjs",
-    "db:gen-types": "dotenv -e .env -- sh -c \"npx supabase gen types typescript --project-id \\\"$SUPABASE_PROJECT_ID\\\" > types/database.types.ts\"",
-    "db:migrate": "dotenv -e .env -- npx supabase db push",
-    "db:reset": "dotenv -e .env -- npx supabase db reset"
+    "vapi:export": "dotenv -e .env.local -e .env -- node scripts/vapi-export-assistants.mjs",
+    "vapi:sync": "dotenv -e .env.local -e .env -- node scripts/vapi-sync-assistants.mjs",
+    "vapi:sync-tools": "dotenv -e .env.local -e .env -- node scripts/vapi-sync-tools.mjs",
+    "db:gen-types": "dotenv -e .env.local -e .env -- sh -c \"npx supabase gen types typescript --project-id \\\"$SUPABASE_PROJECT_ID\\\" > types/database.types.ts\"",
+    "db:migrate": "dotenv -e .env.local -e .env -- npx supabase db push",
+    "db:reset": "dotenv -e .env.local -e .env -- npx supabase db reset"
   },
   "dependencies": {
     "@ai-sdk/groq": "^3.0.35",

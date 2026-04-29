@@ -24,7 +24,7 @@
     "model": "custom-intake-llm",
     "provider": "custom-llm",
     "temperature": 0,
-    "url": "https://amniotic-backlog-yo-yo.ngrok-free.dev/api/openai/chat/completions"
+    "url": "https://aspargolabs-demo.vercel.app/api/openai/chat/completions"
   },
   "name": "Alex",
   "orgId": "963b3696-8d40-48e4-98c4-a9268e935b6c",

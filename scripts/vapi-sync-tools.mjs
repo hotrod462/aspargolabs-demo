@@ -30,6 +30,8 @@ async function main() {
     const tool = await readJson(filePath);
     const filename = path.basename(filePath);
     const body = stripToolForWrite(tool);
+    // PATCH rejects immutable top-level fields on some deployments.
+    if (tool.id) delete body.type;
 
     if (tool.id) {
       if (dryRun) {

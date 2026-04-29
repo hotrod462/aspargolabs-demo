@@ -2,18 +2,10 @@
   "async": false,
   "createdAt": "2026-04-29T07:59:17.877Z",
   "function": {
-    "description": "Send the latest caller response to the backend intake control plane. The backend returns the exact next instruction for the assistant to say and whether the call should end.",
+    "description": "Send each turn to the backend intake control plane for this call. The backend returns the exact next instruction for the assistant to say and whether the call should end.",
     "name": "process_intake_turn",
     "parameters": {
-      "properties": {
-        "transcript": {
-          "description": "The latest final user utterance or concise transcript of what the caller just said.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "transcript"
-      ],
+      "properties": {},
       "type": "object"
     }
   },
@@ -33,5 +25,5 @@
     "url": "https://nonprovincial-unsmoking-winifred.ngrok-free.dev/api/vapi-tools"
   },
   "type": "function",
-  "updatedAt": "2026-04-29T07:59:17.877Z"
+  "updatedAt": "2026-04-29T08:23:17.644Z"
 }

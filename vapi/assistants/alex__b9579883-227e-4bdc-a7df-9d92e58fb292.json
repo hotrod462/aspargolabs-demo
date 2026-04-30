@@ -7,6 +7,11 @@
       "enabled": false
     }
   },
+  "artifactPlan": {
+    "structuredOutputIds": [
+      "f731e222-af05-4901-bfa7-4afc41bf014a"
+    ]
+  },
   "backgroundDenoisingEnabled": true,
   "createdAt": "2026-04-29T12:53:05.050Z",
   "endCallFunctionEnabled": true,
@@ -28,6 +33,10 @@
   },
   "name": "Alex",
   "orgId": "963b3696-8d40-48e4-98c4-a9268e935b6c",
+  "server": {
+    "timeoutSeconds": 20,
+    "url": "https://aspargolabs-demo.vercel.app/api/vapi-webhook"
+  },
   "startSpeakingPlan": {
     "waitSeconds": 0.7
   },
@@ -54,7 +63,7 @@
     "model": "flux-general-en",
     "provider": "deepgram"
   },
-  "updatedAt": "2026-04-29T13:02:03.691Z",
+  "updatedAt": "2026-04-30T05:01:47.936Z",
   "voice": {
     "provider": "vapi",
     "speed": 0.9,

@@ -150,6 +150,45 @@ async function upsertStructuredOutput({ apiKey, structuredOutput, filePath, assi
   return created;
 }
 
+async function syncAssistantArtifactPlanOnly({
+  apiKey,
+  assistant,
+  filePath,
+  assistantId,
+  structuredOutputId,
+  orgId,
+  dryRun,
+}) {
+  const updatedAssistant = {
+    ...assistant,
+    id: assistantId,
+    orgId: orgId ?? assistant.orgId,
+    artifactPlan: {
+      ...(assistant.artifactPlan ?? {}),
+      structuredOutputIds: [structuredOutputId],
+    },
+  };
+
+  if (dryRun) {
+    process.stdout.write(
+      `DRY RUN: update ${path.basename(filePath)} with structured output ${structuredOutputId} (artifactPlan only)\n`
+    );
+    process.stdout.write(`DRY RUN: PATCH /assistant/${assistantId}\n`);
+    return updatedAssistant;
+  }
+
+  await writeJson(filePath, updatedAssistant);
+
+  await vapiFetchJson(`${VAPI_API_BASE_URL}/assistant/${assistantId}`, {
+    method: "PATCH",
+    apiKey,
+    body: stripAssistantForPatch(updatedAssistant),
+  });
+  process.stdout.write(`Updated assistant ${assistantId} with structured output ID(s) on artifactPlan\n`);
+
+  return updatedAssistant;
+}
+
 async function syncAssistant({ apiKey, assistant, filePath, assistantId, toolId, structuredOutputId, orgId, dryRun }) {
   const updatedAssistant = {
     ...assistant,
@@ -188,6 +227,9 @@ async function syncAssistant({ apiKey, assistant, filePath, assistantId, toolId,
 async function main() {
   const apiKey = requireEnv("VAPI_API_KEY");
   const dryRun = process.argv.includes("--dry-run");
+  const structuredOutputOnly =
+    process.argv.includes("--structured-output-only") ||
+    String(process.env.VAPI_STRUCTURED_OUTPUT_ONLY ?? "").trim() === "1";
   const assistantFile = path.resolve(process.cwd(), argValue("assistant-file", DEFAULT_ASSISTANT_FILE));
   const toolFile = path.resolve(process.cwd(), argValue("tool-file", DEFAULT_TOOL_FILE));
   const structuredOutputFile = path.resolve(
@@ -196,9 +238,35 @@ async function main() {
   );
 
   const assistant = await readJson(assistantFile);
-  const tool = await readJson(toolFile);
   const structuredOutput = await readJson(structuredOutputFile);
   const assistantId = ensureAssistantId(assistant);
+
+  if (structuredOutputOnly) {
+    const upsertedStructuredOutput = await upsertStructuredOutput({
+      apiKey,
+      structuredOutput,
+      filePath: structuredOutputFile,
+      assistantId,
+      dryRun,
+    });
+
+    const orgId = upsertedStructuredOutput.orgId ?? assistant.orgId;
+
+    await syncAssistantArtifactPlanOnly({
+      apiKey,
+      assistant,
+      filePath: assistantFile,
+      assistantId,
+      structuredOutputId: upsertedStructuredOutput.id,
+      orgId,
+      dryRun,
+    });
+
+    process.stdout.write(`Done. assistant=${assistantId} structuredOutput=${upsertedStructuredOutput.id}\n`);
+    return;
+  }
+
+  const tool = await readJson(toolFile);
 
   const upsertedTool = await upsertTool({ apiKey, tool, filePath: toolFile, dryRun });
   const upsertedStructuredOutput = await upsertStructuredOutput({

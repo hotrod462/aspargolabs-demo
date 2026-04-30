@@ -1,12 +1,12 @@
 {
   "assistantIds": [
-    "8c49bf5d-0db9-47b5-ac85-c300b85b60f2"
+    "b9579883-227e-4bdc-a7df-9d92e58fb292"
   ],
-  "createdAt": "2026-04-29T13:01:54.587Z",
+  "createdAt": "2026-04-30T05:38:30.775Z",
   "description": "Extracts final normalized patient intake fields from Alex Aspargo voice calls for reconciliation in Supabase.",
-  "id": "e8f18f8c-3938-4b2d-b53a-f4aaf54431ed",
+  "id": "f731e222-af05-4901-bfa7-4afc41bf014a",
   "name": "Alex Aspargo Intake Output",
-  "orgId": "17f06beb-42f7-4b61-9354-1fce154c5643",
+  "orgId": "963b3696-8d40-48e4-98c4-a9268e935b6c",
   "schema": {
     "description": "Final normalized Aspargo clinical intake answers extracted from the completed call.",
     "properties": {
@@ -69,5 +69,5 @@
     "type": "object"
   },
   "type": "ai",
-  "updatedAt": "2026-04-29T13:09:54.929Z"
+  "updatedAt": "2026-04-30T05:38:30.775Z"
 }
